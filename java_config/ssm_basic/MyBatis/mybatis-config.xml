@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+	"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<settings>
+		<!-- 允许JDBC支持生成的键 -->
+		<setting name="useGeneratedKeys" value="true" />
+	</settings>
+	<typeAliases>
+		<!-- 配置数据类型的别名 -->
+		<typeAlias type="com.rainsho.entity.Good" alias="Good" />
+	</typeAliases>
+	<!-- 默认的环境ID -->
+	<environments default="development">
+		<!-- 每个environment元素定义的环境ID -->
+		<environment id="development">
+			<!-- 事务处理方式 -->
+			<transactionManager type="JDBC" />
+			<!-- 数据源配置 -->
+			<dataSource type="POOLED">
+				<!-- 数据库JDBC驱动 -->
+				<property name="driver" value="com.mysql.jdbc.Driver" />
+				<!-- 数据库URL -->
+				<property name="url" value="jdbc:mysql://localhost:3306/[DB_name]" />
+				<!-- 数据库用户 -->
+				<property name="username" value="root" />
+				<!-- 密码 -->
+				<property name="password" value="root" />
+			</dataSource>
+		</environment>
+	</environments>
+	<mappers>
+		<!-- 配置映射文件 -->
+		<mapper resource="com/rainsho/dao/GoodMapper.xml" />
+	</mappers>
+</configuration>
