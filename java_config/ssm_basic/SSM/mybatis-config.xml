@@ -4,42 +4,30 @@
 <configuration>
 
 	<settings>
-		<!-- 允许JDBC支持生成的键 -->
 		<setting name="useGeneratedKeys" value="true" />
 	</settings>
 
+	<!-- alias for mapper -->
 	<typeAliases>
-		<!-- 配置数据类型的别名 -->
-		<typeAlias type="com.rainsho.entity.Good" alias="Good" />
 		<typeAlias type="com.rainsho.entity.User" alias="User" />
-		<typeAlias type="com.rainsho.entity.Order" alias="Order" />
 	</typeAliases>
 
-	<!-- 默认的环境ID -->
+	<!-- environmet id -->
 	<environments default="development">
-		<!-- 每个environment元素定义的环境ID -->
 		<environment id="development">
-			<!-- 事务处理方式 -->
 			<transactionManager type="JDBC" />
-			<!-- 数据源配置 -->
+			<!-- dataSource -->
 			<dataSource type="POOLED">
-				<!-- 数据库JDBC驱动 -->
 				<property name="driver" value="com.mysql.jdbc.Driver" />
-				<!-- 数据库URL -->
 				<property name="url" value="jdbc:mysql://localhost:3306/[DB_name]" />
-				<!-- 数据库用户 -->
-				<property name="username" value="root" />
-				<!-- 密码 -->
-				<property name="password" value="root" />
+				<property name="username" value="rain" />
+				<property name="password" value="rain" />
 			</dataSource>
 		</environment>
 	</environments>
 
 	<mappers>
-		<!-- 配置映射文件 -->
-		<mapper resource="com/rainsho/dao/GoodMapper.xml" />
 		<mapper resource="com/rainsho/dao/UserMapper.xml" />
-		<mapper resource="com/rainsho/dao/OrderMapper.xml" />
 	</mappers>
 
 </configuration>

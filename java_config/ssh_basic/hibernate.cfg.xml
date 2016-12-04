@@ -10,19 +10,26 @@
 			org.hibernate.dialect.MySQLDialect
 		</property>
 		<property name="connection.url">
-			jdbc:mysql://localhost:3306/[DB_name]
+			jdbc:mysql://localhost:3306/twcn
 		</property>
-		<property name="connection.username">root</property>
-		<property name="connection.password">root</property>
-		<!-- MySQL encoding issue -->
-		<property name="connection.useSSL">false</property>
-		<property name="connection.characterEncoding">UTF-8</property>
+		<property name="connection.username">rain</property>
+		<property name="connection.password">rain</property>
 		<property name="connection.driver_class">
 			com.mysql.jdbc.Driver
 		</property>
 		<property name="myeclipse.connection.profile">
-			mysql_test
+			mysql_twcn
 		</property>
+		<!-- for warning and encoding -->
+		<property name="connection.useSSL">false</property>
+		<property name="connection.characterEncoding">UTF-8</property>
+		<property name="connection.autocommit">true</property>
+		<!-- for debug -->
+		<!-- <property name="show_sql">true</property>
+		<property name="format_sql">true</property> -->
+
+		<!-- entity mapping -->
+		<mapping class="com.rainsho.entity.T2p" />
 	</session-factory>
 
 </hibernate-configuration>

@@ -5,6 +5,7 @@
 	version="3.0">
 	<display-name>ssm_test</display-name>
 
+	<!-- spring config -->
 	<listener>
 		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
 	</listener>
