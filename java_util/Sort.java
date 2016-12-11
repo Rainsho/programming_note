@@ -13,6 +13,7 @@ public class Sort {
 		int[] arg = arr.clone();
 		sort.quick(arg, 0, arg.length - 1);
 		sort.dip_arr(arg);
+		sort.dip_arr(sort.bucket(arr));
 		sort.dip_arr(arr);
 	}
 
@@ -107,5 +108,54 @@ public class Sort {
 		}
 		quick(arg, s, l - 1);
 		quick(arg, l + 1, t);
+	}
+
+	// 桶排序a[n]-->a[x][n/x]-->a[n]
+	public int[] bucket(int[] arg) {
+		int max = 100;
+		int group = 10;
+		Integer[][] bucket = new Integer[group][arg.length];
+		// 分组
+		for (int i = 0; i < arg.length; i++) {
+			int pos = arg[i] / (max / group);
+			for (int j = 0; j < bucket[pos].length; j++) {
+				if (bucket[pos][j] == null) {
+					bucket[pos][j] = arg[i];
+					break;
+				}
+			}
+		}
+		// 分组排序
+		for (int i = 0; i < bucket.length; i++) {
+			int t = 0;
+			for (int j = 0; j < bucket[i].length; j++) {
+				if (bucket[i][j] == null) {
+					t = j - 1;
+					break;
+				}
+			}
+			for (int j = 0; j < t; j++) {
+				for (int k = 0; k < t - j; k++) {
+					if (bucket[i][k] > bucket[i][k + 1]) {
+						int temp = bucket[i][k];
+						bucket[i][k] = bucket[i][k + 1];
+						bucket[i][k + 1] = temp;
+					}
+				}
+			}
+		}
+		// 输出
+		int[] arr = new int[arg.length];
+		int t = 0;
+		for (int i = 0; i < bucket.length; i++) {
+			for (int j = 0; j < bucket[i].length; j++) {
+				if (bucket[i][j] == null) {
+					break;
+				} else {
+					arr[t++] = bucket[i][j];
+				}
+			}
+		}
+		return arr;
 	}
 }

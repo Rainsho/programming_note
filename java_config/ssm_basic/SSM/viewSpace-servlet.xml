@@ -15,7 +15,14 @@
 	<context:component-scan base-package="com.rainsho.service"></context:component-scan>
 
 	<!-- annotation @... -->
-	<mvc:annotation-driven></mvc:annotation-driven>
+	<mvc:annotation-driven>
+		<!-- JSON support need 2 more jar -->
+		<!-- <mvc:message-converters register-defaults="true">
+			<bean
+				class="org.springframework.http.converter.json.MappingJacksonHttpMessageConverter"
+				p:supportedMediaTypes="*/*" />
+		</mvc:message-converters> -->
+	</mvc:annotation-driven>
 	<!-- interceptors -->
 	<mvc:interceptors>
 		<mvc:interceptor>
