@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="UTF-8" />
+		<title>Hello React!</title>
+		<script type="text/javascript" src="js/react.min.js"></script>
+		<script type="text/javascript" src="js/react-dom.min.js"></script>
+		<script type="text/javascript" src="js/browser.min.js"></script>
+	</head>
+
+	<body>
+		<div id="example1"></div>
+		<hr />
+		<div id="example2"></div>
+		<hr />
+		<div id="example3"></div>
+		<hr />
+		<div id="example4"></div>
+		<hr />
+		<div id="example5"></div>
+		<hr />
+		<div id="example6"></div>
+
+	</body>
+	<script type="text/babel">
+		// HTML 标签 vs. React 组件
+		// 要渲染 HTML 标签，只需在 JSX 里使用小写字母的标签名
+		// class 属性需要写成 className
+		var myDivElement = <div className="foo" />;
+		ReactDOM.render(
+			myDivElement,
+			document.getElementById('example1')
+		);
+		// 要渲染 React 组件，只需创建一个大写字母开头的本地变量（否则报错）
+		// React.createClass 方法用于生成一个组件类
+		// 向组件传递参数，可以使用 this.props 对象
+		var MyComponent = React.createClass({
+			render: function() {
+				return <h1>React {this.props.someProperty}</h1>
+			}
+		});
+		var myElement = <MyComponent someProperty="组件" />;
+		ReactDOM.render(
+			myElement,
+			document.getElementById('example2')
+		);
+		
+		// 复合组件
+		 var Name = React.createClass({
+		 	render: function() {
+		 		return (
+					<h1>{this.props.name}</h1> 
+		); } });
+		var Link = React.createClass({
+			render: function() {
+				return (
+					<a href={this.props.site}>
+						{this.props.site}
+					</a>
+		); } }); 
+		var WebSite = React.createClass({
+			render: function() {
+				return (
+					<div>
+						<Name name={this.props.name} />
+						<Link site={this.props.site} />
+					</div>
+		); } });
+		React.render(
+		 	<WebSite name="facebook" site="http://www.facebook.com" />,
+			document.getElementById('example3')
+		);
+		
+		// React State(状态)
+		// React 里，只需更新组件的 state，然后根据新的 state 重新渲染用户界面（不要操作 DOM）
+		var LikeButton = React.createClass({
+			// getInitialState 方法用于定义初始状态
+			getInitialState: function() {
+				return {liked: false};
+		 	},
+		 	// this.setState 方法就修改状态值，每次修改以后，自动调用 this.render 方法，再次渲染组件
+		 	handleClick: function(event) {
+				this.setState({liked: !this.state.liked});
+		  	},
+			render: function() {
+				var text = this.state.liked ? '喜欢' : '不喜欢';
+		    		return (
+					<p onClick={this.handleClick}>
+						你<b>{text}</b>我。点我切换状态。
+					</p>
+				);
+			}
+		});
+		React.render(
+			<LikeButton />,
+		  	document.getElementById('example4')
+		);
+		
+		// State 和 Props
+		// state 和 props 主要的区别在于 props 是不可变的，而 state 可以根据与用户交互来改变
+		// 组合使用 state 和 props
+		/*
+		var WebSite = React.createClass({
+			getInitialState: function() { 
+				return { 
+					name: "facebook", 
+					site: "http://www.facebook.com" 
+				}; 
+			}, 
+			render: function() { 
+				return (
+					<div>
+						<Name name={this.state.name} />
+						<Link site={this.state.site} />
+					</div>
+				);
+			 } 
+		});
+		*/
+		
+		// React 事件
+		var HelloMessage = React.createClass({ 
+			getInitialState: function() { 
+				return {value: 'Hello, world!'}; 
+			}, 
+			handleChange: function(event) { 
+				this.setState({value: event.target.value}); 
+			}, 
+			render: function() { 
+				return (
+					<div>
+						<input type="text" value={this.state.value} onChange={this.handleChange} />
+						<h4>{this.state.value}</h4>
+					</div>
+				); 
+			} 
+		}); 
+		ReactDOM.render(
+			<HelloMessage />, 
+			document.getElementById('example5') 
+		);
+		
+		// 获取真实的DOM节点
+		// 根据 React 的设计，所有的 DOM 变动，都先在虚拟 DOM 上发生，然后再将实际发生变动的部分
+		// 但是，有时需要从组件获取真实 DOM 的节点，这时就要用到 ref 属性
+		var MyComponent = React.createClass({ 
+			handleClick: function() { 
+				this.refs.myTextInput.focus(); 
+			}, 
+			render: function() { 
+				return (
+					<div>
+						<input type="text" ref="myTextInput" />
+						<input type="button" value="Focus the text input" onClick={this.handleClick} />
+					</div>
+				); 
+			} 
+		}); 
+		ReactDOM.render(
+			<MyComponent />, 
+			document.getElementById('example6') 
+		);
+	</script>
+	<style type="text/css">
+		.foo {
+			width: 200px;
+			height: 30px;
+			background-color: red;
+		}
+	</style>
+	
+</html>

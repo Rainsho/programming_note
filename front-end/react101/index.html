@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="UTF-8" />
+		<title>Hello React!</title>
+		<!--React 的核心库-->
+		<script type="text/javascript" src="js/react.min.js"></script>
+		<!--提供与 DOM 相关的功能-->
+		<script type="text/javascript" src="js/react-dom.min.js"></script>
+		<!--用于将 JSX 语法转为 JavaScript 语法-->
+		<script type="text/javascript" src="js/browser.min.js"></script>
+	</head>
+
+	<body>
+		<div id="example1"></div>
+		<hr />
+		<div id="example2"></div>
+		<hr />
+		<div id="example3"></div>
+		<hr />
+		<div id="example4"></div>
+		<hr />
+		<div id="example5"></div>
+
+	</body>
+	<script type="text/babel">
+		// Hello, world!
+		ReactDOM.render(
+			<h1>Hello, world!</h1>
+			,
+			document.getElementById('example1')
+		);
+		
+		// 嵌套多个 HTML 标签
+		ReactDOM.render(
+			<div>
+				<h1>Hello</h1>
+				<h1>world!</h1>
+			</div>
+			,
+			document.getElementById('example2')
+		);
+		
+		// JavaScript 表达式
+		var i = 1;
+		ReactDOM.render(
+			<div>
+	 			 <h1>{i == 1 ? 'True' : 'False'}</h1>
+			</div>
+			,
+			document.getElementById('example3')
+		);
+		
+		// 样式
+		var myStyle = { 
+		 	fontSize: 100, 
+		 	color: '#FF0000' 
+		}; 
+		ReactDOM.render(
+			<h1 style={myStyle}>样式</h1>
+			,
+			document.getElementById('example4')
+		);
+		
+		// 数组（自动展开）
+		var arr = [
+		 	<h1>数组</h1>,
+		  	<h2>自动展开</h2>,
+		];
+		ReactDOM.render(
+		  	<div>{arr}</div>
+		  	,
+		  	document.getElementById('example5')
+		);
+	</script>
+
+</html>

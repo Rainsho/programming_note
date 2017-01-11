@@ -1,6 +1,6 @@
 # React入门
 
-[原文：React教程](http://www.runoob.com/react/react-tutorial.html "React教程")
+[原文：React教程](http://www.runoob.com/react/react-tutorial.html "React教程")  
 [React官网](https://facebook.github.io/react/ "React官网")
 
 [TOC]
@@ -184,8 +184,8 @@ var HelloMessage = React.createClass({
 ## React组件API
 > * 设置状态：setState
 * 替换状态：replaceState
-* 设置属性setProps
-* 替换属性replaceProps
+* 设置属性：setProps
+* 替换属性：replaceProps
 * 强制更新：forceUpdate
 * 获取DOM节点：findDOMNode
 * 判断组件挂载状态：isMounted
