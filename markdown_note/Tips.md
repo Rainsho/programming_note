@@ -11,13 +11,12 @@
  * nvl/nvl2/nullif/coalesce
  * case/decode
 
-
- ## JavaScript
- * 数组方法
-  * slice() //arguments: 0复制 1起 2起止
-  * push和pop //末尾
-  * unshift和shift //头
-  * sort/reverse/splice/concat/join
+## JavaScript
+* 数组方法
+ * slice() //arguments: 0复制 1起 2起止
+ * push和pop //末尾
+ * unshift和shift //头
+ * sort/reverse/splice/concat/join
 * for ... in <-> for ... of
 * var/let/const
 * apply/call
