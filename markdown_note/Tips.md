@@ -19,7 +19,7 @@
  * sort/reverse/splice/concat/join
 * for ... in <-> for ... of
 * var/let/const
-* apply/call
+* apply/call //重新指定this的指向
  * Math.max.apply(null, [3, 5, 4]);
  * Math.max.call(null, 3, 5, 4);
  * apply装饰器
@@ -27,8 +27,29 @@
 * 箭头函数内部的this是词法作用域，由上下文确定
 * function* foo(){yield n;}
 * JSON.parse/stringify();
+* DOM: 删除多个节点时，要注意children属性时刻都在变化
+* AJAX: XMLHttpRequest/ActiveXObject
+ * onreadystatechange
+ * readyState/status
+ * open/send()
+ * 跨域请求
+   * flash/同源proxy
+   * JSONP跨域引用JS
+   * CORS(HTML5)
+* Promise对象
+ * `(function(a, b){}).then(a).catch(b)`
+ * `job1.then(job2).then(job3).catch(error)`
+ * `Promise.all/race([p1, p2]).then();`
+* jQuery
+ * `dom=$('#id').get(0)`<-->`jq=$(dom)`
+ * `$('.red.green')`'a,b'/'a>b'/'first/last/nth-child(0)'/'a:eq/gt/lt'
+ * find/parent/next/prev('a')
+ * filter('a'/foo())
+ * .attr/prop('checked')/**is(':checked')** --> 'checked'/true/true | 'selected'
+ * 扩展`$.fn.foo = function(){}`
+* 异步错误处理，注意try...catch的时机
 
-### JS闭包实例
+### JS闭包示例
 ```JavaScript
 function make_pow(n) {
     return function (x) {
@@ -85,7 +106,7 @@ function SubClass(props) {
     this.grade = props.grade || 1;
 }
 
-function F(){}
+function F() {}
 
 F.prototype = Base.prototype;
 Sub.prototype = new F();
@@ -119,4 +140,75 @@ class Sub extends Base {
     // do something
   }
 }
+```
+
+### Promise异步计算示例
+```JavaScript
+// 0.5秒后返回input*input的计算结果:
+function multiply(input) {
+    return new Promise(function (resolve, reject) {
+        console.log('calculating ' + input + ' x ' + input + '...');
+        setTimeout(resolve, 500, input * input);
+    });
+}
+
+// 0.5秒后返回input+input的计算结果:
+function add(input) {
+    return new Promise(function (resolve, reject) {
+        console.log('calculating ' + input + ' + ' + input + '...');
+        setTimeout(resolve, 500, input + input);
+    });
+}
+
+var p = new Promise(function (resolve, reject) {
+    console.log('start new Promise...');
+    resolve(123);
+});
+
+p.then(multiply)
+ .then(add)
+ .then(multiply)
+ .then(add)
+ .then(function (result) {
+    console.log('Got value: ' + result);
+});
+```
+
+## HTML5
+### File API
+通过File/FileReader对象实现图片预览
+```JavaScript
+var
+    fileInput = document.getElementById('test-image-file'),
+    info = document.getElementById('test-file-info'),
+    preview = document.getElementById('test-image-preview');
+// 监听change事件:
+fileInput.addEventListener('change', function () {
+    // 清除背景图片:
+    preview.style.backgroundImage = '';
+    // 检查文件是否选择:
+    if (!fileInput.value) {
+        info.innerHTML = '没有选择文件';
+        return;
+    }
+    // 获取File引用:
+    var file = fileInput.files[0];
+    // 获取File信息:
+    info.innerHTML = '文件: ' + file.name + '<br>' +
+                     '大小: ' + file.size + '<br>' +
+                     '修改: ' + file.lastModifiedDate;
+    if (file.type !== 'image/jpeg' && file.type !== 'image/png' && file.type !== 'image/gif') {
+        alert('不是有效的图片文件!');
+        return;
+    }
+    // 读取文件:
+    var reader = new FileReader();
+    reader.onload = function(e) {
+        var
+            data = e.target.result; // 'data:image/jpeg;base64,/9j/4AAQSk...(base64编码)...'            
+        preview.style.backgroundImage = 'url(' + data + ')';
+    };
+    // 以DataURL的形式读取文件:
+    reader.readAsDataURL(file);
+});
 ```
