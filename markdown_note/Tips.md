@@ -3,50 +3,50 @@
 * 连字符'||'
 * 伪列rownum和rowid
 * 函数
- * lower/upper/initcap/concat/substr/length/instr/trim/replace
- * round/trunc/mod/ceil/floor
- * sysdate/months_between/add_months/next_day/last_day
- * to_char(sysdate, 'mm/dd/yyyy hh24:mi:ss')
- * to_date('1995-1-1','yyyy"年"mm"月"dd"日"')
- * nvl/nvl2/nullif/coalesce
- * case/decode
+  * lower/upper/initcap/concat/substr/length/instr/trim/replace
+  * round/trunc/mod/ceil/floor
+  * sysdate/months_between/add_months/next_day/last_day
+  * to_char(sysdate, 'mm/dd/yyyy hh24:mi:ss')
+  * to_date('1995-1-1','yyyy"年"mm"月"dd"日"')
+  * nvl/nvl2/nullif/coalesce
+  * case/decode
 
 ## JavaScript
 * 数组方法
- * slice() //arguments: 0复制 1起 2起止
- * push和pop //末尾
- * unshift和shift //头
- * sort/reverse/splice/concat/join
+  * slice() //arguments: 0复制 1起 2起止
+  * push和pop //末尾
+  * unshift和shift //头
+  * sort/reverse/splice/concat/join
 * for ... in <-> for ... of
 * var/let/const
 * apply/call //重新指定this的指向
- * Math.max.apply(null, [3, 5, 4]);
- * Math.max.call(null, 3, 5, 4);
- * apply装饰器
+  * Math.max.apply(null, [3, 5, 4]);
+  * Math.max.call(null, 3, 5, 4);
+  * apply装饰器
 * map/reduce/filter //filter (element, index, self) => ...
 * 箭头函数内部的this是词法作用域，由上下文确定
 * function* foo(){yield n;}
 * JSON.parse/stringify();
 * DOM: 删除多个节点时，要注意children属性时刻都在变化
 * AJAX: XMLHttpRequest/ActiveXObject
- * onreadystatechange
- * readyState/status
- * open/send()
- * 跨域请求
-   * flash/同源proxy
-   * JSONP跨域引用JS
-   * CORS(HTML5)
+  * onreadystatechange
+  * readyState/status
+  * open/send()
+  * 跨域请求
+    * flash/同源proxy
+    * JSONP跨域引用JS
+    * CORS(HTML5)
 * Promise对象
- * `(function(a, b){}).then(a).catch(b)`
- * `job1.then(job2).then(job3).catch(error)`
- * `Promise.all/race([p1, p2]).then();`
+  * `(function(a, b){}).then(a).catch(b)`
+  * `job1.then(job2).then(job3).catch(error)`
+  * `Promise.all/race([p1, p2]).then();`
 * jQuery
- * `dom=$('#id').get(0)`<-->`jq=$(dom)`
- * `$('.red.green')`'a,b'/'a>b'/'first/last/nth-child(0)'/'a:eq/gt/lt'
- * find/parent/next/prev('a')
- * filter('a'/foo())
- * .attr/prop('checked')/**is(':checked')** --> 'checked'/true/true | 'selected'
- * 扩展`$.fn.foo = function(){}`
+  * `dom=$('#id').get(0)`<-->`jq=$(dom)`
+  * `$('.red.green')`'a,b'/'a>b'/'first/last/nth-child(0)'/'a:eq/gt/lt'
+  * find/parent/next/prev('a')
+  * filter('a'/foo())
+  * .attr/prop('checked')/**is(':checked')** --> 'checked'/true/true | 'selected'
+  * 扩展`$.fn.foo = function(){}`
 * 异步错误处理，注意try...catch的时机
 
 ### JS闭包示例
