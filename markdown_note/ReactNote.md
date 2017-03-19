@@ -1,4 +1,4 @@
-#React Note
+# React Note
 
 React 包含
 * 组件
@@ -112,7 +112,7 @@ Counter.defaultProps = { initialCount: 0 };
 #### 生命周期函数
 * `componentWillMount`
 * `componentDidMount`
- * 从这里开始，可以通过 `ReactDOM.findDOMNode(this)` 获取到组件的 DOM 节点
+  * 从这里开始，可以通过 `ReactDOM.findDOMNode(this)` 获取到组件的 DOM 节点
 * `componentWillReceiveProps`
 * `shouldComponentUpdate`
 * `componentWillUpdate`
