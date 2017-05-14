@@ -68,7 +68,7 @@ console.log(5);
 
 `fs`, `net`, `http` 模块依赖 `Stream` 基于 `Event`
 
-> 通过继承 EventEmitter 来使得一个类具有 node 提供的基本的 event 方法, 这样的对象可以称作 emitter, 而触发(emit)事件的 cb 则称作 listener  
+> 通过继承 EventEmitter 来使得一个类具有 node 提供的基本的 event 方法，这样的对象可以称作 emitter ，而触发(emit)事件的 cb 则称作 listener  
 emitter 的触发不存在冒泡, 逐层捕获等事件行为
 
 EventListener 按注册顺序同步调用 listener `emitter.on('key', foo); emitter.on('key', bar);`
@@ -89,12 +89,12 @@ function sleep(ms) {
 
 ### 任务队列
 
-异步执行的运行机制如下
+异步执行的运行机制如下：
 
 > 1. 所有同步任务都在主线程上执行，形成一个执行栈（execution context stack）
-1. 主线程之外，还存在一个"任务队列"（task queue）。只要异步任务有了运行结果，就在"任务队列"之中放置一个事件
-1. 一旦"执行栈"中的所有同步任务执行完毕，系统就会读取"任务队列"，看看里面有哪些事件。那些对应的异步任务，于是结束等待状态，进入执行栈，开始执行
-1. 主线程不断重复上面的第三步
+> 1. 主线程之外，还存在一个"任务队列"（task queue）。只要异步任务有了运行结果，就在"任务队列"之中放置一个事件
+> 1. 一旦"执行栈"中的所有同步任务执行完毕，系统就会读取"任务队列"，看看里面有哪些事件。那些对应的异步任务，于是结束等待状态，进入执行栈，开始执行
+> 1. 主线程不断重复上面的第三步
 
 ![Event Loop](pic/event_loop.png)
 
