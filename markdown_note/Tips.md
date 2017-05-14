@@ -50,7 +50,7 @@
 * 异步错误处理，注意try...catch的时机
 
 ### JS闭包示例
-```JavaScript
+```javascript
 function make_pow(n) {
     return function (x) {
         return Math.pow(x, n);
@@ -74,7 +74,7 @@ arr ----> Array.prototype ----> Object.prototype ----> null
 > 不同实例里的方法单独存在，`a.foo === b.foo //false`
 
 #### JS面向对象示例
-```JavaScript
+```javascript
 function Student(props) {
     this.name = props.name || '匿名'; // 默认值为'匿名'
     this.grade = props.grade || 1; // 默认值为1
@@ -95,7 +95,7 @@ var xiaoming = createStudent({
 
 #### 原型继承与class继承
 借助空函数修正原型链。
-```JavaScript
+```javascript
 /*
 new SubClass() ----> SubClass.prototype ----> BaseClass.prototype ----> Object.prototype ----> null
 */
@@ -124,7 +124,7 @@ function inherits(Child, Parent) {
 ![js-proto-extend](pic/js-proto-extend.png)
 
 ES6新增`class`关键字。
-```JavaScript
+```javascript
 class Base {
   constructor() {
     // do something
@@ -143,7 +143,7 @@ class Sub extends Base {
 ```
 
 ### Promise异步计算示例
-```JavaScript
+```javascript
 // 0.5秒后返回input*input的计算结果:
 function multiply(input) {
     return new Promise(function (resolve, reject) {
@@ -174,10 +174,23 @@ p.then(multiply)
 });
 ```
 
+### browser API
+
+```javascript
+window.onbeforeunload = () => {
+    console.log(1); // ok
+    alert(2); // blocked
+    return 3; // default msg
+}
+
+navigator.getBattery(); // => Promise
+```
+
 ## HTML5
+
 ### File API
 通过File/FileReader对象实现图片预览
-```JavaScript
+```javascript
 var
     fileInput = document.getElementById('test-image-file'),
     info = document.getElementById('test-file-info'),
@@ -211,4 +224,16 @@ fileInput.addEventListener('change', function () {
     // 以DataURL的形式读取文件:
     reader.readAsDataURL(file);
 });
+```
+
+### Canvas
+
+基础操作
+
+```javascript
+$('body').before('<canvas id="canvas"></canvas>');
+
+let context = $('#canvas')[0].getContext('2d');
+context.fillStyle = 'red';
+context.fillRect(20, 20, 100, 200);
 ```
