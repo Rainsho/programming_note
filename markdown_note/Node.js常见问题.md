@@ -102,6 +102,59 @@ function sleep(ms) {
 
 > 指定回调函数的部分（onload和onerror），在send()方法的前面或后面无关紧要
 
-同理，`setTimeout` 只是将事件插入了“任务队列”,必须等待执行栈执行完。
+同理，`setTimeout` 只是将事件插入了“任务队列”，必须等待执行栈执行完。
 
 Node.js 中 `process.nextTick` 在当前执行栈尾部添加事件，`setImmediate` 在任务队列后添加事件。
+
+## 模块
+
+### 模块机制
+
+#### 上下文
+
+每个 node 进程只有一个 VM 的上下文，`.js` 独立一个环境，是因为 node 在外层包了一圈自执行
+
+```javascript
+// b.js
+(function (exports, require, module, __filename, __dirname) {
+  t = 111;
+})();
+
+// a.js
+(function (exports, require, module, __filename, __dirname) {
+  // ...
+  console.log(t); // 111
+})();
+```
+
+#### 循环加载
+
+`a.js; b.js` 相互依赖，`module.exports` 和 `exports` 的区别，决定了相互引用时未执行完的一方被引用时拿到的是 {}
+
+##### CommonJS模块的加载原理
+
+`require` 命令第一次加载该脚本，就会执行整个脚本，然后在内存生成一个对象。需要用到这个模块的时候，就会到 `exports` 属性上面取值。CommonJS 模块无论加载多少次，都只会在第一次加载时运行一次。CommonJS 输入的是被输出值的拷贝，不是引用。
+
+简言之，`a.js` 执行过程中遇到 `require(b)` 则去执行 `b.js` 此时 `require(a)` 只拿到已执行完的部分。
+
+##### ES6模块的循环加载
+
+ES6 模块是动态引用，`import` 加载从模块加载变量，变量不会被缓存，而是成为一个指向被加载模块的引用。
+
+简言之，`a.js` 执行过程中遇到从 `b.js` `import` 的方法 `foo` 会到 `b.js` 中执行 `foo`。
+
+### 热更新
+
+代码中 `require` 会拿到之前的编译好缓存在 v8 内存 (code space) 中的的旧代码，清除 `catch` 再次 `require` 可在**局部**拿到新代码。
+
+## 进程
+
+### process 对象
+
+```javascript
+console.log(process); // process 对象
+
+function test() { // 递归调用 process.nextTick 导致 任务队列阻塞？
+  process.nextTick(() => test());
+}
+```
