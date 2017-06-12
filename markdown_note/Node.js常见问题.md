@@ -158,3 +158,94 @@ function test() { // 递归调用 process.nextTick 导致 任务队列阻塞？
   process.nextTick(() => test());
 }
 ```
+
+通过环境变量指定配置时，可以通过 `process.env` 获取配置。在使用配置文件时，可使用 `process.cwd()` 拿到 current working directory，通过 `process.chdir()` 改变当前工作目录。
+
+process 同时提供了三个标准流：`process.stderr`， `process.stdout` 以及 `process.stdin`。
+
+```javascript
+var obj = {};
+console.log(obj);
+obj.foo = 'bar';
+// WebKit 环境 console.log 只储存 obj 的引用
+// 代码进入事件队列时才进行快照 异步表现
+// Node 环境下 严格同步
+```
+
+### Child Process
+
+可通过 Node.js 的 `child_process` 模块执行文件（调用命令行）等。 pomelo 通过此模块实现分布式架构。
+
+由此引出几种进程：
+* 父进程
+  * 死亡时，若子进程可运行或僵死，子进程被 init 进程收养，成为孤儿进程
+* 子进程
+  * 死亡后，向父进程发送死亡信号
+  * 死亡时，父进程未 `wait()`，则残留在 `PCB` 形成僵尸进程
+* 孤儿进程
+* 僵尸进程
+
+### Cluster
+
+基于 `child_process.fork()` 实现多核办法，通过 IPC 通讯，通过 `cluster.isMaster` 标识（不拷贝父进程空间，父进程的变量等）。
+
+```javascript
+const cluster = require('cluster');            // | | 
+const http = require('http');                  // | | 
+const numCPUs = require('os').cpus().length;   // | |    都执行了
+                                               // | | 
+if (cluster.isMaster) {                        // |-|-----------------
+  // Fork workers.                             //   | 
+  for (var i = 0; i < numCPUs; i++) {          //   | 
+    cluster.fork();                            //   | 
+  }                                            //   | 仅父进程执行 (a.js)
+  cluster.on('exit', (worker) => {             //   | 
+    console.log(`${worker.process.pid} died`); //   | 
+  });                                          //   |
+} else {                                       // |-------------------
+  // Workers can share any TCP connection      // | 
+  // In this case it is an HTTP server         // | 
+  http.createServer((req, res) => {            // | 
+    res.writeHead(200);                        // |   仅子进程执行 (b.js)
+    res.end('hello world\n');                  // | 
+  }).listen(8000);                             // | 
+}                                              // |-------------------
+                                               // | |
+console.log('hello');                          // | |    都执行了
+```
+
+以上代码 `a.js` 执行了一次，`b.js`执行了 `numCPUs` 次，cluster 模块作为桥梁，让二者实现沟通。
+
+### 进程间通信
+
+IPC (Inter-process communication) 进程间通信技术。
+
+> Node.js 中的 IPC 通信是由 libuv 通过管道技术实现的, 在 windows 下由命名管道（named pipe）实现，*nix 系统则采用 UDS (Unix Domain Socket) 实现。普通的 socket 是为网络通讯设计的，网络本身是不可靠的。为 IPC 设计的 socket 默认本地的网络环境是可靠的, 所以可以简化大量不必要的 encode/decode 以及计算校验等, 得到效率更高的 UDS 通信。
+
+IPC 通道建立之前, 父进程与子进程通信？ env ?
+
+### 守护进程
+
+实现一个守护进程：
+* 创建一个进程 A
+* 在进程 A 中创建进程 B
+* 对进程 B 执行 setsid 方法
+  * 该进程变成一个新会话的会话领导
+  * 该进程变成一个新进程组的组长
+  * 该进程没有控制终端
+* 进程 A 退出，进程 B 由 init 进程接管（此时 B 为守护进程）
+
+```javascript
+var spawn = require('child_process').spawn;
+var process = require('process');
+
+var p = spawn('node', ['endless.js'], {
+    detached: true
+});
+console.log(process.pid, p.pid);
+process.exit(0); // 此时 process 已关闭，p 执行完后关闭
+```
+
+## IO
+
+### Buffer
