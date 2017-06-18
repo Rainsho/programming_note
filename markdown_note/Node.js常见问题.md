@@ -249,3 +249,111 @@ process.exit(0); // 此时 process 已关闭，p 执行完后关闭
 ## IO
 
 ### Buffer
+
+> Buffer 是 Node.js 中用于处理二进制数据的类, 其中与 IO 相关的操作 (网络/文件等) 均基于 Buffer
+
+### String Decoder
+
+> 字符串解码器 (String Decoder) 是一个用于将 Buffer 拿来 decode 到 string 的模块, 是作为 Buffer.toString 的一个补充, 它支持多字节 UTF-8 和 UTF-16 字符
+
+### Console
+
+> `console.log` 正常情况下是异步的, 除非使用 `new Console(stdout[, stderr])` 指定了一个文件为目的地
+
+简单实现 `console.log`
+```javascript
+const print = (str) => process.stdout.write(str + '\n');
+print('hello world');
+```
+
+### File
+
+Unix/Linux 的基本哲学之一：“一切皆是文件”（文件、目录、字符设备、块设备、套接字等）。
+
+> 在 shell 上运行一个应用程序的时候, shell 做的第一个操作是 fork 当前 shell 的进程 (所以, 如果你通过 ps 去查看你从 shell 上启动的进程, 其父进程 pid 就是当前 shell 的 pid), 在这个过程中也把 shell 的 stdio 继承给了你当前的应用进程, 所以你在当前进程里面将数据写入到 stdout, 也就是写入到了 shell 的 stdout, 即在当前 shell 上显示了  
+> 当你使用 ssh 在远程服务器上运行一个命令的时候, 在服务器上的命令输出虽然也是写入到服务器上 shell 的 stdout, 但是这个远程的 shell 是从 sshd 服务上 fork 出来的, 其 stdout 是继承自 sshd 的一个 fd, 这个 fd 其实是个 socket, 所以最终其实是写入到了一个 socket 中, 通过这个 socket 传输你本地的计算机上的 shell 的 stdout
+
+同步的获取用户的输入（伪代码）
+
+```javascript
+var fs = require('fs');
+var BUFSIZE = 256;
+var buf = new Buffer(BUFSIZE);
+var bytesRead;
+
+bytesRead = fs.readSync(fd, buf, 0, BUFSIZE);
+return buf.toString(null, 0, bytesRead - 1);
+```
+
+### Readline
+
+> `readline` 模块提供了一个用于从 Readble 的 stream (例如 process.stdin) 中一次读取一行的接口
+
+```javascript
+const readline = require('readline');
+const fs = require('fs');
+
+const rl = readline.createInterface({
+    input: fs.createReadStream('hello.js')
+});
+
+rl.on('line', (line) => {
+    console.log(`Line from file: ${line}`);
+});
+```
+
+如何实现？ `input.on('keypress', onkeypress)` / `regExp.test` ?
+
+## Network
+
+### 粘包
+
+ TCP 延迟传送算法（Nagle 算法）将短时间内的多个数据缓存到一起，一次性发送。
+
+ 在处理多条消息时，2-4情况为粘包情况（send 分别 data1 data2）：
+
+ 1. data1, data2
+ 1. data1_p1, data1_p2 + data2
+ 1. data1 + data2_p1, data2_p2
+ 1. data1 + data2
+
+对应常见的解决方案：
+
+1. 多次发送之前间隔一个等待时间
+1. 关闭 Nagle 算法
+1. 进行封包/拆包（包前后加特征的数据）
+
+### 可靠传输
+
+(SYN, Synchronise packet) + (ACK, Acknowledgedgement) 机制。  
+接收方通过 SYN 序号来保证数据的不会乱序(reordering), 发送方通过 ACK 来保证数据不缺漏, 以此参考决定是否重传。
+
+### UDP
+
+TCP/UDP 的区别（传输层协议）
+
+|协议|连接性|双工性|可靠性|有序性|有界性|拥塞控制|传输速度|量级|头部大小|
+|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+|TCP|面向连接(Connection oriented)|全双工(1:1)|可靠(重传机制)|有序(通过SYN排序)|无, 有粘包情况|有|慢|低|20~60字节|
+|UDP|无连接(Connection less)|n:m|不可靠(丢包后数据丢失)|无序|有消息边界, 无粘包|无|快|高|8字节|
+
+### HTTP
+
+> RESTful 是把每个 URI 当做资源 (Resources), 通过 **method** 作为动词来对资源做不同的动作, 然后服务器返回 status 来得知资源状态的变化 (State Transfer)  
+> 协议 (protocol) 这种东西就是人与人之间协商的约定, 什么行为是什么作用都是"约定"好的, 而不是强制使用的
+
+讨论 GET 和 POST 的区别，可以从 RESTful 提倡的语义角度考虑。
+
+### headers
+
+> session 存在服务端， cookie 存在客户端。服务端可以通过设置 cookie 的值为空并设置一个及时的 expires 来清除存在客户端上的 cookie  
+> 由于同源性策略 (CORS), 如果引用的 js 脚本所在的域与当前域不同, 那么浏览器会把 onError 中的 msg 替换为 Script error
+
+### DNS
+
+> .lookup 查询直接调用 `getaddrinfo` 来拿取地址, 速度很快, 但是如果本地的 hosts 文件被修改了, .lookup 就会拿 hosts 文件中的地方, 而 .resolve 依旧是外部正常的地址  
+> 浏览器缓存 => 本地 hosts 文件 => DNS 服务器
+
+## OS
+
+### TTY
