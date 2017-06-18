@@ -344,6 +344,19 @@ TCP/UDP 的区别（传输层协议）
 
 讨论 GET 和 POST 的区别，可以从 RESTful 提倡的语义角度考虑。
 
+一些关于 HTTP/1.1 的补充：
+1. 引入了持久连接（persistent connection），即 TCP 连接默认不关闭
+1. 引入了管道机制（pipelining），即在同一个TCP连接里面，客户端可以同时发送多个请求
+1. `Content-length` 字段声明本次回应的数据长度
+1. 可以不使用 `Content-Length` 字段，而使用"分块传输编码"（chunked transfer encoding）
+1. 每个非空的数据块之前，会有一个16进制的数值，表示这个块的长度
+
+一些关于 RESTful 的补充
+1. Representational State Transfer 表现层状态转化
+1. Resources 资源 （被省略的主语） URI就成了作为每一个资源的地址或独一无二的识别符
+1. Representation 表现层 资源的具体呈现形式 Accept和Content-Type字段指定
+1. State Transfer 状态转化 HTTP 无状态 客户端想要操作服务器，必须通过某种手段（method），让服务器端发生"状态转化"
+
 ### headers
 
 > session 存在服务端， cookie 存在客户端。服务端可以通过设置 cookie 的值为空并设置一个及时的 expires 来清除存在客户端上的 cookie  
