@@ -370,3 +370,65 @@ TCP/UDP 的区别（传输层协议）
 ## OS
 
 ### TTY
+
+原意是指 teletype 即打字机，在 Unix 中指任何表现像打字机的设备，如 terminal
+
+### OS
+
+常用方法： os.arch/constants/cpus/endianness/homedir/hostname/loadavg/platform()
+
+EOL: end of line LF(\n) / CR(\r)
+
+### Path
+
+Windows vs. POSIX
+
+例如： `path.posix.sep == '/'` <-> `path.win32.sep == '\\'`  
+其他常用方法： path.{posix/win32}.normalize/basename/join/relative()  
+常量： sep/delimiter/PATH
+
+## 错误处理
+
+### Errors
+
+NOde.js 中四种主要错误：
+1. Standard JavaScript errors
+1. System errors
+1. User-specified errors (`throw`)
+1. Assertion errors
+
+主要处理方法：
+* callback(err, data) 回调约定 | 繁琐且不具备强制性
+* throw / try / cathc
+* EventEmitter 的 error 事件 | 监听 http server 等对象的 `error` 事件
+* ~~使用 Promise 封装异步~~
+
+### 错误栈丢失
+
+> 当使用 `setImmediate` 等定时器来设置异步的时候，错误栈中仅输出到 test 函数内调用的地方位置, 再往上 main 的调用信息就丢失了
+
+### 错误处理实践
+
+### 防御性编程
+
+### uncaughtException
+
+> 当异常没有被捕获一路冒泡到 Event Loop 时就会触发该事件 process 对象上的 `uncaughtException` 事件. 默认情况下, Node.js 对于此类异常会直接将其堆栈跟踪信息输出给 `stderr` 并结束进程, 而为 `uncaughtException` 事件添加监听可以覆盖该默认行为, 不会直接结束进程  
+> `uncaughtException` 的初衷是可以让你拿到错误之后可以做一些回收处理之后再 process.exit
+
+```javascript
+process.on('uncaughtException', (err) => {
+  console.log(`Caught exception: ${err}`);
+});
+```
+
+### unhandledRejection
+
+> 当 Promise 被 reject 且没有绑定监听处理时, 就会触发该事件
+
+```javascript
+process.on('unhandledRejection', (reason, p) => {
+  console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
+  // application specific logging, throwing an error, or other logic here
+});
+```
