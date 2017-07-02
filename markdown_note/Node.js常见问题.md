@@ -524,8 +524,9 @@ BC范式是第三范式的特殊情况，既每个表**只有一个**候选键�
 ### MySql
 
 储存引擎：
+
 |attr|MyISAM|InnoDB|
-|:-:|:-:|:-:|
+|:--:|:--:|:--:|
 |Locking|Table-level|Row-level|
 |designed for|need of speed|high volume of data|
 |foreign keys|× (DBMS)|✓ (RDBMS)|
@@ -564,8 +565,9 @@ BC范式是第三范式的特殊情况，既每个表**只有一个**候选键�
 ### 缓存
 
 redis 与 memcached 区别：
+
 |attr|memcached|redis|
-|:-:|:-:|:-:|
+|:--:|:--:|:--:|
 |struct|key/value|key/value + list, set, hash etc.|
 |backup|×|✓|
 |Persistence|×|✓|
