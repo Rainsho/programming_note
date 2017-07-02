@@ -627,7 +627,7 @@ Cross-Site Request Forgery 跨站请求伪造
 * 通源检查
   * Origin Header
   * Referer Header
-CSRF token
+* CSRF token
   * 算法生成 token 存在 session 隐藏在表单中
 
 ### MITM
