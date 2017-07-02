@@ -403,13 +403,15 @@ NOde.js 中四种主要错误：
 * EventEmitter 的 error 事件 | 监听 http server 等对象的 `error` 事件
 * ~~使用 Promise 封装异步~~
 
+错误是一个 Error 实例，抛出后成为异常 `throw new Error()` <-> `callback(new Error())`
+
 ### 错误栈丢失
 
 > 当使用 `setImmediate` 等定时器来设置异步的时候，错误栈中仅输出到 test 函数内调用的地方位置, 再往上 main 的调用信息就丢失了
 
-### 错误处理实践
-
 ### 防御性编程
+
+> 防御性编程是一种编程习惯，是指预见在什么地方可能会出现问题，然后创建一个环境来测试错误，当预见的问题出现的时候通知你，并执行一个你指定的损害控制动作
 
 ### uncaughtException
 
@@ -431,4 +433,215 @@ process.on('unhandledRejection', (reason, p) => {
   console.log('Unhandled Rejection at: Promise', p, 'reason:', reason);
   // application specific logging, throwing an error, or other logic here
 });
+```
+
+## 测试
+
+### 测试方法
+
+* 黑盒测试（测试功能）
+  * 集成测试 Integration Testing
+  * 系统测试 System Testing
+* 白盒测试（测试程序内部结构或运作）
+  * 单元测试 Unit Testing
+  * 集成测试
+  * 系统的软件测试
+
+### 单元测试
+
+* Unit 过程化编程中的单个程序、函数、过程，面向对象中的基类、抽象类、子类中的方法
+* 覆盖率 (Test Coverage) 行/函数/分支/语句覆盖率
+* Mock 模拟测试对象可能依赖的其他对象
+
+### Assert
+
+> 快速判断并对不符合预期的情况进行报错的模块
+
+```javascript
+if (condition) {
+  throw new Error('Sth wrong');
+}
+
+assert(!condition, 'Sth wrong');
+```
+
+## util
+
+href:
+* protocol + auth + host + path + hash
+  * host: hostname + port
+  * path: pathname + search
+* http :// user:pass @ host.com : 8080 / path ? query=string # hash
+
+转义字符： `encodeURI()`
+
+## 储存
+
+### 数据库范式
+
+目标：减少冗余、消除异常、数据组织和谐
+
+#### 1NF
+
+> 如果一个关系模式R的所有属性都是不可分的基本数据项，则R∈1NF
+
+每个属性都不可再分，例如 Address 可再分为 city/country/street...
+
+![1NF](pic/1nf.png)
+
+#### 2NF
+
+> 若关系模式R∈1NF，并且每一个非主属性都完全函数依赖于R的码，则R∈2NF
+
+表中的属性必须全部依赖于全部主键，而不是部分主键。例如 departmentDescription 依赖主键 departmentName 但不依赖主键 EmployeeID
+
+![2NF](pic/2nf.png)
+
+#### 3NF
+
+> 关系模式R<U，F> 中若不存在这样的码X、属性组Y及非主属性Z（Z  Y）, 使得X→Y，Y→Z，成立，则称R<U，F> ∈ 3NF
+
+第三范式为了消除数据库中关键字之间的依赖关系。例如 jobDescription 依赖 job
+
+![3NF](pic/3nf.png)
+
+#### BCNF
+
+> 设关系模式R<U，F>∈1NF，如果对于R的每个函数依赖X→Y，若Y不属于X，则X必含有候选码，那么R∈BCNF
+
+BC范式是第三范式的特殊情况，既每个表**只有一个**候选键（每行值不相同），例如 email 是唯一的
+
+![BCNF](pic/bcnf.png)
+
+#### 4NF
+
+> 关系模式R<U，F>∈1NF，如果对于R的每个非平凡多值依赖X→→Y（Y  X），X都含有候选码，则R∈4NF
+
+第四范式是消除表中的多值依赖，减少维护数据一致性的工作，例如 skill 可能第一个值是 "C#" 和 第二个值是 "C# .net" 造成内容不一致（一对多？）
+
+![4NF](pic/4nf.png)
+
+### MySql
+
+储存引擎：
+|attr|MyISAM|InnoDB|
+|:-:|:-:|:-:|
+|Locking|Table-level|Row-level|
+|designed for|need of speed|high volume of data|
+|foreign keys|× (DBMS)|✓ (RDBMS)|
+|transaction|×|✓|
+|fulltext search|✓|×|
+|scene|lots of select|lots of insert/update|
+|count rows|fast|slow|
+|auto_increment|fast|slow|
+
+索引类型：
+* normal
+* unique
+* full text
+
+### 数据一致性
+
+读写分离？M/M？M/S？
+
+#### 事务
+
+两阶段提交（数据库/分布式系统）：
+> 第一阶段：
+> * 协调者会问所有的参与者结点，是否可以执行提交操作。
+> * 各个参与者开始事务执行的准备工作：如：为资源上锁，预留资源，写undo/redo log……
+> * 参与者响应协调者，如果事务的准备工作成功，则回应“可以提交”，否则回应“拒绝提交”。
+>
+> 第二阶段：
+> * 如果所有的参与者都回应“可以提交”，那么，协调者向所有的参与者发送“正式提交”的命令。参与者完成正式提交，并释放所有资源，然后回应“完成”，协调者收集各结点的“完成”回应后结束这个Global Transaction。
+> * 如果有一个参与者回应“拒绝提交”，那么，协调者向所有的参与者发送“回滚操作”，并释放所有资源，然后回应“回滚完成”，协调者收集各结点的“回滚”回应后，取消这个Global Transaction。
+> 
+> 异常：
+> * 如果第一阶段中，参与者没有收到询问请求，或是参与者的回应没有到达协调者。那么，需要协调者做超时处理，一旦超时，可以当作失败，也可以重试。
+> * 如果第二阶段中，正式提交发出后，如果有的参与者没有收到，或是参与者提交/回滚后的确认信息没有返回，一旦参与者的回应超时，要么重试，要么把那个参与者标记为问题结点剔除整个集群，这样可以保证服务结点都是数据一致性的。
+> * 第二阶段中，如果参与者收不到协调者的commit/fallback指令，参与者将处于“状态未知”阶段，参与者完全不知道要怎么办。
+
+### 缓存
+
+redis 与 memcached 区别：
+|attr|memcached|redis|
+|:-:|:-:|:-:|
+|struct|key/value|key/value + list, set, hash etc.|
+|backup|×|✓|
+|Persistence|×|✓|
+|transcations|×|✓|
+|consistency|strong (by cas)|weak|
+|thread|multi|single|
+|memory|physical|physical & swap|
+
+## 安全
+
+### Crypto
+
+### TLS/SSL
+
+Secure Socket Layer & Transport Layer Security
+
+SSL 的主要用途：
+1. 认证用户和服务器, 确保数据发送到正确的客户机和服务器;
+1. 加密数据以防止数据中途被窃取;
+1. 维护数据的完整性, 确保数据在传输过程中不被改变.
+
+三个特性：
+* 机密性：SSL协议使用密钥加密通信数据
+* 可靠性：服务器和客户都会被认证, 客户的认证是可选的
+* 完整性：SSL协议会对传送的数据进行完整性检查
+
+### HTTPS
+
+### XSS
+
+Cross-Site Scripting 跨站脚本可通过 img.src / Ajax / onclick 等事件方式实现，通过编码转换绕过检查。
+
+```javascript
+<table background="javascript:alert(/xss/)"></table>
+<img src="javascript:alert('xss')">
+
+<img src="javas cript:
+alert('xss')">
+
+<img%20src=%22javascript:alert('xss');%22>
+<img src="javascrip&#116&#58alert(/xss/)">
+```
+
+#### CSP
+
+Content Security Policy 网页安全政策
+
+> CSP 的实质就是白名单制度，开发者明确告诉客户端，哪些外部资源可以加载和执行，等同于提供白名单。它的实现和执行全部由浏览器完成，开发者只需提供配置。
+
+1. 通过 HTTP 头信息的 `Content-Security-Policy` 的字段
+1. 通过网页的 `<meta>` 标签
+
+### CSRF
+
+Cross-Site Request Forgery 跨站请求伪造
+
+* 通源检查
+  * Origin Header
+  * Referer Header
+CSRF token
+  * 算法生成 token 存在 session 隐藏在表单中
+
+### MITM
+
+Man-in-the-middle attack 中间人攻击
+
+### SQL/NoSQL注入
+
+SQL `'; DROP TABLE users; --`
+
+NoSQL
+```javascript
+let {user, pass, age} = ctx.query;
+
+db.collection.find({
+  user, pass,
+  $where: `this.age >= ${age}`
+})
 ```
