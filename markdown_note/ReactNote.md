@@ -315,3 +315,88 @@ function someApp(state = initialState, action) {
   }
 }
 ```
+
+## 一点补充
+
+[参考](https://blog.gmem.cc/react-study-note)
+
+### 动画
+
+借助 `ReactCSSTransitionGroup` 实现的动画效果。在 browser compiler 模式下，引入`react-with-addons`、`react-dom`、`react-transition-group`、`babel`
+
+```javascript
+var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup;
+
+render() {
+  return (
+    <div>
+      <button onClick={this.handleAdd}>Add item</button>
+      <ReactCSSTransitionGroup
+          transitionName="example"
+          transitionEnterTimeout={500}
+          transitionLeaveTimeout={300}>
+          {items}
+      </ReactCSSTransitionGroup>
+    </div>
+  )
+}
+```
+
+> 1. 当条目被加入时，样式类 example-enter 被应用，紧接着 example-enter-active 则被应用
+> 1. 当条目被移除时，样式类 example-leave 被应用，紧接着 example-leave-active 则被应用
+
+或者通过 `transitionName` 自定义样式名称。
+
+### SyntheticEvent
+
+通过 SyntheticEvent 的 `nativeEvent` 属性，可以访问到原生浏览器事件对象。
+阻止事件冒泡需显示的调用 `e.stopPropagation()` 或 `e.preventDefult()`。
+由于 SyntheticEvent 是被 pooled，实例会被重用，因此不能异步使用。
+
+### 性能优化
+
+1. 构建
+
+基于 create-react-app 执行 `npm run build`  
+使用 Webpack 添加如下配置：
+
+```javascript
+new webpack.DefinePlugin( {
+    'process.env': {
+        NODE_ENV: JSON.stringify( 'production' )
+    }
+} ),
+new webpack.optimize.UglifyJsPlugin()
+```
+
+2. Reconciliation (重渲染?)
+
+O(n) 复杂度的 diffing algorithm 基于两个假设：
+
+* 两个类型不同的元素类型，总是产生不同的DOM子树
+* 开发者应当使用 `key` 属性对子元素进行标识
+
+比较根元素(根元素变化整个子树重建)：
+
+* 旧 DOM 销毁，触发 `componentWillUnmount()`
+* 新 DOM 插入，新组件的 `componentWillMount()` 等依次触发
+* 嵌套子 DOM / 组件被销毁或者创建
+
+递归子节点：
+
+在不使用 `key` 的情况下，每发现不一样的子节点，就认为其已变化。`[1, 2]` 变为 `[0, 1, 2]` 被认为是删除了两个子元素，新增了三个子元素。(且通常情况下新渲染的是元素2!)
+
+3. 避免重渲染 `SCU`
+
+React 创建维护虚拟 DOM，避免对 DOM 节点的不不用访问，访问 DOM 节点比 JS 对象缓慢。
+
+4. 使用不可变数据
+
+基于浅比较判断变化的缺点 `this.state.names.push('Alex')`，常见解决办法 `...` 或者 `assign`，引入 `Immutable.js`。
+
+### 零散问题
+
+> `import React from 'react';` 意味着将 react 模块的默认导出 (default export) 
+导入到当前模块。但是 React 并非基于 ES6 语言编写，因此不适用默认导出。
+实际上，此语法是依赖于 Babel 的支持，效果上相当于把 react 模块的 `module.exports = React;` 
+直接赋值给当前模块的 React 变量。下面这种写法是等价的 `import * as React from 'react';`。
