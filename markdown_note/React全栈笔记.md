@@ -22,7 +22,7 @@
 1. `Babel CLI` 命令行编译
 
 ```bash
-npm install babel-cli -g
+npm install -g babel-cli
 babel es6.js -o compiled.js
 ```
 
@@ -115,7 +115,7 @@ React 推荐通过 `webpack` 或 `browserify` 构建应用，搭配 `loader` 或
 
 ### 辅助工具
 
-#### Package Manager
+#### 包管理工具 Package Manager
 
 1. 安装包
 
@@ -132,3 +132,71 @@ npm install --save package
 npm install --save-dev package
 ```
 
+2. 包和模块
+
+包是用 package.json 描述的文件或文件夹，模块指任何可以被 Node.js 中 `require` 载入的文件。所有的模块都是包，但一些 CLI 包只包括可执行命令行工具。
+
+#### 任务流工具 Task Runner
+
+前端常见工作: `jshint` 检验 JS 文件格式，`uglifyjs` 压缩。Task Runner 避开 shell script，使用 JS 语法实现。
+
+1. Grunt
+
+```bash
+npm install -g grunt-cli
+```
+
+Grunt 通过插件与其他工具结合，例如 `grunt-contrib-jshint`，通过 Gruntfile.js 配置，通过 `grunt --help` 查看，通过 `grunt` 执行。
+
+```javascript
+module.exports = function(grunt) {
+  // 定义任务配置
+  grunt.initConfig({
+    jshint: {
+      src: 'scr/test.js'
+    },
+    uglify: {
+      build: {
+        src: 'src/test.js',
+        dest: 'build/test.min.js'
+      }
+    }
+  });
+  // 导入插件
+  grunt.loadNpmTasks('grunt-contrib-jshint');
+  grunt.loadNpmTasks('grunt-contrib-uglify');
+  // 注册任务
+  grunt.registerTask('default', ['jshint','uglify']);
+}
+```
+
+2. Gulp
+
+```bash
+npm install -g gulp-cli
+```
+
+Gulp 通过插件与其他工具适配，通过 gulpfile.js 配置，通过流简化任务间的配置和输出，`gulp` 默认执行 `default` 任务。
+
+```javascript
+// Gulp 主体和插件
+var gulp = require('gulp');
+var jshint = require('gulp-jshint');
+var uglify = require('gulp-uglify');
+// 定义 lint 任务，使用 pipe 向下传递
+gulp.task('lint', function() {
+  return gulp.src('src/test.js')
+    .pipe(jshint())
+    .pipe(jshint.reporter('default'));
+});
+// 定义 compress 任务
+gulp.task('compress', function(){
+  return gulp.src('src/test.js')
+    .pipe(uglify())
+    .pipe(gulp.dest('build'));
+});
+// 组合任务
+gulp.task('default', ['lint', 'compress']);
+```
+
+#### 模块打包工具 Bundler
