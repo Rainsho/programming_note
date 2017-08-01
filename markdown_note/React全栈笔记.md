@@ -200,3 +200,59 @@ gulp.task('default', ['lint', 'compress']);
 ```
 
 #### 模块打包工具 Bundler
+
+浏览器环境下 Node.js 中用 `require` 同步加载的方式无法使用，通过 Bundler 编译、转换、合并以生成浏览器良好运行的代码。
+
+1. browserify
+  * 支持 CommonJS 模块
+  * `browserify test.js > bundle.js`
+2. webpack
+  * 支持 AMD 和 CommonJS，通过 `loader` 机制也可使用 ES6 模块
+
+## webpack
+
+支持多种模块方案，视一切资源为可管理模块。code spliting 方案支持大规模 Web 应用，loader/plugin 开发扩展配套工具。
+
+### webpack 特点
+
+#### webpack 与 RequireJS / browserify
+
+RequireJS 是一个基于 AMD 规范的 JS 模块加载器，同时提供构建工具 r.js 将匿名模块具名化并进行合并。
+RequireJS 从入口文件开始递归的进行静态分析，找出直接或间接依赖然后转换合并，大致如下：
+
+```javascript
+// bundle.js
+define('hello', [], function (require) {
+  module.exports = 'hello!';
+});
+define('say', ['require', 'hello'], function (require) {
+  var hello = require('./hello');
+  alert(hello);
+});
+```
+
+browserify 以在浏览器中使用 Node.js 模块为出发点。对 CommonJS 规范的模块进行转换盒包装，对很多标准 package 进行了浏览器端适配。
+
+webpack 为前端模块打包构建而生。解决了代码的拆分与异步加载、对非 JS 资源的支持，`loader` 设计使其更像一个平台。
+
+#### 模块规范
+
+AMD 将模块的实现包在匿名函数(AMD factory)中实现作用域隔离，使用文件路径作为 ID 实现命名空间控制，将模块的工厂方法作为参数传入全局
+的 define，使工厂方法的执行时机可控，变相模拟出了同步的局部 `require`。
+
+CommonJS 约等于去掉 `define` 及工厂方法外壳的 AMD，因此无法直接执行(浏览器环境无法实现同步的 `require` 方法)，但书写更简洁。
+
+#### 非 javascript 模块支持
+
+组件化开发对局部逻辑进行封装，通过尽可能少的必要接口与其他组件组装及交互。减少组件入口文件数，尽可能对所有依赖内部申明(高内聚)。
+
+RequireJS 较不完善，browserify 通过 transform 插件实现引入与打包，webpack 对应的是 loader。
+
+#### 构建产物
+
+r.js 构建 `define(function(){...})` 的集合，需要引入 AMD 模块加载器(loader.js / bundle.js)，而 browserify 与 webpack 构建结果
+都是可以直接执行的 JS 代码(bundle.js)任务。
+
+#### 使用
+
+
