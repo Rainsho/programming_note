@@ -68,7 +68,8 @@ foo.bar = bar;
 
 2. AMD & CommonJS
 
-AMD 模块在全局环境下定义 `require` 和 `define`，通过文件路径或模块自己申明进行定位，模块实现中声明的依赖，由加载器操作，提供打包工具自动分析依赖并合并。常见 AMD 模块如下：
+AMD 模块在全局环境下定义 `require` 和 `define`，通过文件路径或模块自己申明进行定位，模块实现中声明的依赖，由加载器操作，提供
+打包工具自动分析依赖并合并。常见 AMD 模块如下:
 
 ```javascript
 define(function (require) {
@@ -81,7 +82,7 @@ define(function (require) {
 });
 ```
 
-CommonJS (Node.js 使用此规范) 不适合浏览器环境，经转换后可在浏览器执行，较 AMD 更简洁，典型模块如下：
+CommonJS (Node.js 使用此规范) 不适合浏览器环境，经转换后可在浏览器执行，较 AMD 更简洁，典型模块如下:
 
 ```javascript
 // 通过相对路径获得依赖模块
@@ -134,7 +135,8 @@ npm install --save-dev package
 
 2. 包和模块
 
-包是用 package.json 描述的文件或文件夹，模块指任何可以被 Node.js 中 `require` 载入的文件。所有的模块都是包，但一些 CLI 包只包括可执行命令行工具。
+包是用 package.json 描述的文件或文件夹，模块指任何可以被 Node.js 中 `require` 载入的文件。所有的模块都是包，但一些 CLI 
+包只包括可执行命令行工具。
 
 #### 任务流工具 Task Runner
 
@@ -146,7 +148,8 @@ npm install --save-dev package
 npm install -g grunt-cli
 ```
 
-Grunt 通过插件与其他工具结合，例如 `grunt-contrib-jshint`，通过 Gruntfile.js 配置，通过 `grunt --help` 查看，通过 `grunt` 执行。
+Grunt 通过插件与其他工具结合，例如 `grunt-contrib-jshint`，通过 Gruntfile.js 配置，通过 `grunt --help` 查看，通过 `grunt` 
+执行。
 
 ```javascript
 module.exports = function(grunt) {
@@ -218,7 +221,7 @@ gulp.task('default', ['lint', 'compress']);
 #### webpack 与 RequireJS / browserify
 
 RequireJS 是一个基于 AMD 规范的 JS 模块加载器，同时提供构建工具 r.js 将匿名模块具名化并进行合并。
-RequireJS 从入口文件开始递归的进行静态分析，找出直接或间接依赖然后转换合并，大致如下：
+RequireJS 从入口文件开始递归的进行静态分析，找出直接或间接依赖然后转换合并，大致如下:
 
 ```javascript
 // bundle.js
@@ -237,8 +240,8 @@ webpack 为前端模块打包构建而生。解决了代码的拆分与异步加
 
 #### 模块规范
 
-AMD 将模块的实现包在匿名函数(AMD factory)中实现作用域隔离，使用文件路径作为 ID 实现命名空间控制，将模块的工厂方法作为参数传入全局
-的 define，使工厂方法的执行时机可控，变相模拟出了同步的局部 `require`。
+AMD 将模块的实现包在匿名函数(AMD factory)中实现作用域隔离，使用文件路径作为 ID 实现命名空间控制，将模块的工厂方法作为参数传入
+全局的 define，使工厂方法的执行时机可控，变相模拟出了同步的局部 `require`。
 
 CommonJS 约等于去掉 `define` 及工厂方法外壳的 AMD，因此无法直接执行(浏览器环境无法实现同步的 `require` 方法)，但书写更简洁。
 
@@ -250,9 +253,73 @@ RequireJS 较不完善，browserify 通过 transform 插件实现引入与打包
 
 #### 构建产物
 
-r.js 构建 `define(function(){...})` 的集合，需要引入 AMD 模块加载器(loader.js / bundle.js)，而 browserify 与 webpack 构建结果
-都是可以直接执行的 JS 代码(bundle.js)任务。
+r.js 构建 `define(function(){...})` 的集合，需要引入 AMD 模块加载器(loader.js / bundle.js)，而 browserify 与 webpack 构建
+结果都是可以直接执行的 JS 代码(bundle.js)任务。
 
 #### 使用
+
+1. r.js: `r.js -o app.build.js`
+2. browserify
+  * CLI: `browserify [entry files] {OPTIONS}`
+  * Node.js API: `var browserify = require('browserify')`
+3. webpack (CLI && Node.js API)
+
+webpack 支持部分命令行配置，但主要配置通过配置文件 (webpack.config.js) 进行配置。配置文件在 Node.js 环境运行，export JS 对象
+作为配置信息，亦可 `require` 其他模块，实现复杂任务配置的组织。
+
+#### webpack 特色
+
+1. code spliting
+
+将应用代码拆分为多个块(chunk)，按需异步加载。实际使用中，多用来拆分第三方库或某些功能的内部逻辑。以此提升单页面应用初始加载速度。
+
+2. 智能静态分析
+
+webpack 支持含变量的简单表达式应用，对于 `require('./template/'+name+'.jade')` webpack 会提取出以下信息:
+
+* 目录位于 ./template 下
+* 相对路径符合正则表达式:　`/^.*\.jade$/`
+
+然后将以上模块全部打包，在执行期，依据实际值决定使用。
+
+3. Hot Module Replacement
+
+修改完某一模块后无须刷新页面即可动态将受影响的模块替换为新模块，在后续执行中使用新模块逻辑。这一功能需要修改 module 本身，可配合 
+style-loader 或者 react-hot-loader 等第三方工具实现。通过 `webpack-dev-server --hot` 启动功能。
+
+### 基于 webpack 进行开发
+
+#### Hello world
+
+`webpack index.js bundle.js`
+
+webpack 主要做了两部分工作:
+
+* 分析得到所有必需模块并合并
+* 提供让模块有序、正常执行的环境
+
+bundle.js 简要解析:
+
+* 立即执行函数 IIFE `(modules) => __webpack_require__(0)`
+* webpackBootstrap 提供
+  * module 缓存对象 `installedModules = {}`
+  * require 函数 `__webpack_require__(moduleId)`
+    * module 在 cache 中直接 `return`
+    * 否则新建一个放入 cache `{exports: {}, id: moduleId, loader: false}`
+    * 执行 module 函数 `modules[moduleId].call()`
+    * 标记已加载 `module.loader = true`
+    * `return module.exports`
+  * 暴露 modules 对象
+  * 暴露 modules 缓存
+  * 设置 webpack 公共路径
+  * 读取入口模块并返回 `reutrn __webpack_require__(0)`
+* modules 作为 webpackBootstrap 的入参匿名函数(factory)集合
+  * `(module, exports, __webpack_require__) => {}`
+  * `(module, exports) => {}`
+
+构建中指定 index 模块所对应的 JS 文件，webpack 通过静态分析语法树，递归检测所有依赖并合入。`__webpack_require__` 只需要模块在 
+modules 中的索引作为标识即可。
+
+#### 使用 loader
 
 
