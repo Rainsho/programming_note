@@ -278,7 +278,7 @@ webpack 支持部分命令行配置，但主要配置通过配置文件 (webpack
 webpack 支持含变量的简单表达式应用，对于 `require('./template/'+name+'.jade')` webpack 会提取出以下信息:
 
 * 目录位于 ./template 下
-* 相对路径符合正则表达式:　`/^.*\.jade$/`
+* 相对路径符合正则表达式: `/^.*\.jade$/`
 
 然后将以上模块全部打包，在执行期，依据实际值决定使用。
 
@@ -321,5 +321,123 @@ bundle.js 简要解析:
 modules 中的索引作为标识即可。
 
 #### 使用 loader
+
+> functions (running in node.js) that take the source of a resource file as the parameter and return the new source
+
+webpack 中 `loader` 通常为 `xxx-loader` 的 npm 包，例如: `jsx-loader`(JSX -> JS)、`style-loader`(将 CSS 以 `<style>` 
+插入页面)、`css-loader`(检查 `import` 并合并)，`require('style!css!./index.css')` 通过 `style!css!` 指定 `loader`。
+打包后 CSS 通过 JS 以 `<style>` 的形式插入页面。存在段子的无样式瞬间，可借助 `extract-text-webpack-plugin` 将样式内容抽离并
+输出到额外的 CSS 文件中，然后在 `<head>` 引用。
+
+> 常见前端页面性能优化建议: `<link>` 插入 `<head>`，`<script>` 放在 `<body>` 最后
+
+#### 配置文件
+
+webpack 默认使用当前目录下的 webpack.config.js，配置文件只需 export 配置信息即可 `module.exports`。
+
+配置信息对象基本内容:
+
+* entry 入口文件 (e.g. `path.join(__dirname, 'index')`)
+* output 输出结果
+  * path 输出目录 (e.g. `__dirname + '/dist'`)
+  * filename 输出文件名 (e.g. `bundle_[hash].js`)
+  * publicPath 目录所对应的外部路径(浏览器入口) (e.g. `http://cnd.abc.com/static/`)
+* module
+  * loaders (e.g. `[{test: /\.css$/, loaders: ['style-loader', 'css-loader']}]`)
+
+#### 使用 plugin
+
+`loader` 专注资源内容转换，`plungin` 实现扩展，诸如 `HtmlWebpackPlugin` 自动生成 HTML 页面，`EnvironmentPlugin` 向构建过程
+中注入环境变量，`BannerPlugin` 向 chunk 结果中添加注释，其中后两者为 webpack 内置，更多第三方的可通过 npm 包引入。plugin 相关
+配置对应 webpack 配置信息中的 plugins 字段，为数组，每一项为一个 plugin 实例。
+
+```javascript
+// 使用内置 plugin
+var webpack = require('webpack');
+webpack.BannerPlugin;
+
+// 配置 plugin
+var HtmlWebpackPlugin = require('html-webpack-plugin');
+module.exports = {
+  entry: '',
+  output: {},
+  module: {},
+  plugins: [
+    new HtmlWebpackPlugin({
+      title: 'use plugin' // 该 plugin 的配置信息
+    })
+  ]
+}
+```
+
+#### 实时构建
+
+```bash
+webpack --watch/-w
+# webpack-dev-server 辅助开发
+# 基于 Express 框架的 Node.js 服务器
+# 可在配置文件添加 devServer 进行配置
+webpack-dev-server
+```
+
+## React
+
+三大特点: ~~抽烟、喝酒、烫头~~ 组件、JSX、Virtual DOM
+
+> 传统前端开发需同时维护数据及视图，**模板引擎**帮助我们解决了初始状态下二者的对应关系。然而，在组件状态改变时，依旧需要被各自维护。
+对此，一般的 MVVM 框架通过对模板的分析获取数据与视图(DOM 节点)的对应关系，然后对数据进行监控，在数据变化时更新视图。然而，传统的流
+行模板都是通用模板，渲染仅仅是文本替换，语法上不足以支撑 MVVM 的需求，因此 MVVM 框架都会在 HTML 的基础上扩展一套独立的
+**模板语法**，使用**自定义命令 (Directive)** 进行逻辑描述，从而使这部分逻辑可被解析并复用。
+
+性能问题: 避开操作 DOM，只重新生成虚拟 DOM，在虚拟 DOM 生成真实 DOM 前进行比较 (Diff)，仅将变化部分作用到真实 DOM。
+
+> 在 React 的哲学里，直接操作 DOM 是典型的反模式。React 的出现允许我们以简单粗暴的方式构建界面: 仅仅声明**数据到视图的转换逻辑**，
+然后维护数据的变动，自动更新视图。
+
+### React + webpack 开发环境
+
+#### 安装配置 Babel
+
+```bash
+# 安装
+# babel-core 和 babel-loader 配合 webpack
+npm install --save-dev babel-core babel-loader
+# 两个 presets ES6 和 React 支持
+npm install --save-dev babel-preset-es2015 babel-preset-react
+```
+
+```json
+// 配置 .babelrc
+{
+  "presets": ["es2015", "react"]
+}
+```
+
+#### 安装配置 ESLint
+
+ESLint 和 JSLint、JSHint、JSCS 等工具提供代码检查，ESLint 提供一个完全可配置的检查规则，而且有众多第三方 plugin 支持。
+启用 ESLint 为 webpack 添加 `preLoaders` 在 `loader` 处理资源之前进行处理。
+
+```bash
+# 安装
+npm install --save-dev eslint eslint-loader
+# 插件
+npm install --save-dev eslint-plugin-import eslint-plugin-react eslint-plugin-jsx-a11y
+npm install --save-dev eslint-config-airbnb
+```
+
+```json
+// 配置 .eslintrc
+{
+  "extends": "airbnb",
+  "rules": {
+    "comma-dangle": ["error", "never"]
+  }
+}
+```
+
+以上配置直接继承了 `eslint-config-airbnb` 的配置规则，同时覆盖了其 `comma-dangle` 的规则。
+
+#### 配置 webpack
 
 
