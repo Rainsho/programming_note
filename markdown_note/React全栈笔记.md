@@ -440,4 +440,45 @@ npm install --save-dev eslint-config-airbnb
 
 #### 配置 webpack
 
+```javascript
+// webpack.config.js 示例
+/**** 引入模块定义常量 ****/
+module.exports = {
+  entry: { app: APP_PATh },
+  output: { path, filename },
+  devtool: 'eval-source-map', // 开启 dev source map
+  devServer: { historyApiFallback, hot, inline, progress },
+  module: {
+    preLoaders: [{ test, loaders, include }],
+    loaders: [{ test, loaders, include }],
+    plugins: [new HtmlWebpackPlugin()]
+  },
+  resolve: {
+    extensions: ['', '.js', '.jsx'] // 支持 import 加载 JSX
+  }
+}
+```
+
+#### 添加热加载 HMR
+
+ps: !!!修改业务可直接应用，但是修改 DOM 可能会触发页面刷新。
+
+```bash
+# 安装 Babel 的 preset
+# 同时处理 hmr 和 catch-errors
+npm install --save-dev babel-preset-react-hmre
+```
+
+```json
+// 加入 .babelrc
+"presets": [],
+"env": { // 开发时启用
+  "development": {
+    "presets": ["react-hmre"]
+  }
+}
+```
+
+### 组件
+
 
