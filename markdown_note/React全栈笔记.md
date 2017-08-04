@@ -472,7 +472,8 @@ npm install --save-dev babel-preset-react-hmre
 ```json
 // 加入 .babelrc
 "presets": [],
-"env": { // 开发时启用
+// 开发时启用
+"env": {
   "development": {
     "presets": ["react-hmre"]
   }
@@ -480,5 +481,77 @@ npm install --save-dev babel-preset-react-hmre
 ```
 
 ### 组件
+
+一些零碎概念:
+
+* ES6 class 写法在 `constructor` 定义 `this.state` 代替 ~~`getInitialState`~~
+  * 不会把自定义的 `callback` 绑定到实例上，需要手动绑定
+* 组件 `ReactElement` 是一种 JS 数据结构，通过 `ReactDOM` 挂载到 DOM 节点
+* 组件本身是一个状态机，通过 `this.setState` 让组件再次调用 `render` 来渲染 UI
+
+一些关于 React 的补充:
+
+1. props
+
+React 可以让用户自定义组件属性的变量类型，验证组件传入属性:
+
+```javascript
+MyComponent.propTypes = {
+  name: PropTypes.string.isRequired,
+  age: PropTypes.number.isRequired
+};
+```
+
+2. events
+
+React 并未把事件绑定在特点的 DOM 节点上，只是用事件代理的方式在最外层绑定了事件回调，并在 `unmounted` 时自动删除。
+
+3. lifecycle
+
+* 初始化: `getDefaultProps` -> `getInitialState` -> `componentWillMount` -> `render` -> `componentDidMount`
+* props 更新: `componentWillReceiveProps` -> `shouldComponentUpdate` -> `componentWillUpdate` -> 
+`render` -> `componentDidUpdate`
+* 卸载: `componentWillUnmount`
+
+使用 ES6 class 写法时通过 `static defaultProps = {}` 获得默认 `props`。`render` 是唯一一个必要方法并且应该是一个纯函数，即在给
+定相同条件时返回相同的 `ReactElement` 对象。通常在 `componentDidMount` 中执行 AJAX 操作。
+
+4. stateless functional component
+
+```javascript
+// 无状态组件推荐写成纯函数
+function Hobby(props) {
+  return <li>{props.hobby}</li>;
+}
+```
+
+5. state 设计原则
+
+尽量多的无状态组件关心渲染数据，在组件外层设计一个包含 `state` 的父级组件负责处理事件、交流逻辑、修改 `state`。
+`state` 应该是轻量的 JSON 数据，仅包含组件事件回调可能引发 UI 更新的，不包含可计算出来的。
+
+### Virtual DOM
+
+> `ReactElement` 是一种轻量级的、无状态的、不可改变的、DOM 元素的虚拟表述。核心在于用 JS 对象来表述 DOM 结构，使用 Diff 算法来
+取得两个对象之间的差异，并用最少的 DOM 操作完成更新。
+
+### 实践
+
+一些开发的 Tips: 
+
+* 将原型图拆分成组件
+* 所有组件归档至 components 文件夹，使用 index 输出
+* 循环时为子组件添加唯一 `key` 值
+* `state` 设计原则 DRY (Don't Repeart Yourself)
+* thinking-in-react
+  * 画模型图
+  * 将模型图拆分成组件
+  * 实现静态版本的程序和组件
+  * 组合静态版本
+  * 设计 `state` 的组成和实现
+  * 添加交互方法
+  * 组合以上
+
+### 测试
 
 
