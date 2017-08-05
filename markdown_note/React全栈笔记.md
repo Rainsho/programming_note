@@ -554,4 +554,214 @@ function Hobby(props) {
 
 ### 测试
 
+这里使用 Mocha 作为前端测试框架，Chai 作为断言库(提供 `assert`、`should`、`expect` 三种 API 完成断言测试)。
 
+```javascript
+// test.js
+var expect = require('chai').expect;
+
+describe('test suit', function () {
+  it('test suit', function () {
+    expect(4 + 5).to.not.equal(8);
+    expect(true).to.be.true;
+  });
+})
+```
+
+```bash
+# 安装(是否全局自己考量)
+npm install mocha chai
+# 测试
+mocha test.js
+```
+
+#### React 测试
+
+Airbnb 的 Enzyme 对官方的 `react-addons-test-utils` 进行了较好的封装，以下使用该库。
+`render` 前是虚拟 DOM 对象，`render` 后是真实 DOM。对前者可按测试对象的方式检测，对后者可测试一些真实的交互对 DOM 结构的影响。
+
+1. 测试环境
+
+```json
+// package.json
+{
+  "scripts": {
+    "test": "set NODE_ENV=production && mocha --compiler js:babel-core/register --require ignore-style"
+  }
+}
+```
+
+以上命令: `mocha` 使用 `babel` 编译 JS 代码，使用 `ignore-style` 插件忽略 ES6 语法 `import './style.less'` 这样的样式文件。
+通过 `--compilers` 指定预编译器，通过 `--require` 指定需要引入的辅助插件。
+
+2. Shallow Render
+
+该 API 生成虚拟 DOM 实例，然后测试属性，适合无状态组件。针对无状态组件，测试的方法一般是根据传入属性，判断是否生成了对应的数据。
+
+```javascript
+// 渲染 shallow 组件对象
+const wrapper = shallow(<MyComponent />);
+// find() 选择器 text() 取值
+expect(wrapper.find('h1').text()).to.equal('hello, world');
+// find() @param 'h1'/'#id'/'.class'/Component
+expect(list.find(ListItem).length).to.equal(testDate.length);
+```
+
+3. DOM Rendering
+
+该 API 会将虚拟 DOM 转化成真实 DOM，用来测试交互操作，如单击或在输入框输入值。
+
+```javascript
+// 挂载 DOM 结构
+const deskmark = mount(<Deskmark />);
+// 单击操作
+deskmark.find('.create-bar-component').simulate('click');
+// expect ...
+// 输入操作
+const input = deskmark.find('input');
+input.node.value = 'new title';
+input.simulate('change', input);
+// expect ...
+```
+
+## Flux
+
+> Flux 是 Facebook 官方提出的一套前端应用架构模式，他的核心概念是单向数据流。它更像是一种软件开发模式，而不是具体的一个框架。
+
+MVC 架构双向数据流，controller 是 model 和 view 之间的交互媒介(处理 view 交互，通知 model 更新，操作成功后通知 view 更新)。
+
+Flux 流程: Action -> Dispatcher -> Store -> View
+
+* Action
+  * 描述一个行为及相关信息
+  * 如创建文章: `{actionName: 'create-post', data: {content: 'balabala...'}}`
+* Dispatcher
+  * 信息分发中心，负责连接 Action 和 Store
+  * 使用 `dispatch` 方法执行 Action
+  * 使用 `register` 方法注册回调
+* Store
+  * 处理完毕后，使用 `emit` 发送 `change` 广播，告知 Store 已改变
+* View
+  * 监听 `change` 事件，被触发后调用 `setState` 更新 UI
+
+### Dispatcher 和 action
+
+交互动作作为 action 交给 Dispatcher 调度中心就行处理。action 只是一个普通的 JS 对象，用 `actionType` 字段表用用途，用另一字段
+传递信息。当程序复杂度较高时，可能导致在不同的 view 中 `dispatch` 相同的对象，鉴于此 Flux 提出了 `action creator` 的概念，将
+数据抽象到一些函数中。
+
+```javascript
+// ./dispatcher
+// 实例化一个 Dispatcher 并返回
+import { Dispatcher } from 'flux';
+export default new Dispatcher();
+
+// ./components
+import TodoAction from '../actions';
+class Todo extends React.Component {
+  /* ... */
+  deleteTodo(id) {
+    TodoAction.delete(id);
+  }
+  /* ... */
+}
+
+// ./actions
+import AppDispatcher from '../dispatcher';
+const TodoAction = {
+  /* ... */
+  delete(id) {                        // ---- action creator ----
+    AppDispatcher.dispatch({          // ----     action     ----
+      actionType: 'DELETE_TODO',      //
+      id                              //
+    });                               // ----     action     ----
+  },                                  // ---- action creator ----
+  /* ... */
+}
+```
+
+### store 和 Dispatcher
+
+store 是单例(Singleton)模式，故每种 store 都仅有一个实例。不同类型的数据应该创建多个 store。Dispatcher 的 `register` 方法用来
+注册不同事件的处理回调，并在回调中对 store 进行处理。action 对应 `dispatch` 传来的 action，store 是更新数据的唯一场所，action 
+和 Dispatcher 不应该做数据操作。
+
+```javascript
+// ./stores
+const TodoStore = {
+  todos: [],
+  getAll() {
+    return this.todos;
+  },
+  deleteTodo(id) {
+    this.todos = this.todos.filter(x => x.id !== id);
+  }
+};
+// dispatch 传来的 action
+// register 接受一个函数作为回调，所有动作都会发送到这个回调
+AppDispatcher.register((action) => {
+  switch (action.actionType) {
+    case 'CREATE_TODO':
+      TodoStore.addTodo(action.todo);
+      break;
+    /* ... */    
+  }
+});
+```
+
+### store 和 view
+
+store 的变化需要通知 view 让其展示新的数据。通过类似订阅-发布(Pub-Sub)模式，借助 Node.js 标准库的 EventEmitter 在 store 中添加
+这一特性。store 的变化适用 `emit` 方法广播出去，view 层在初始化完毕时监听 store 的 `change` 事件。
+
+```javascript
+// ./stores
+// npm install --save events
+import EventEmitter from 'events';
+const TodoStore = Object.assign({}, EventEmitter.prototype, {
+  /* ... */
+  emitChange() {
+    this.emit('change');
+  },
+  addChangeListener(callback) {
+    this.on('change', callback);
+  },
+  removeChangeListener(callback) {
+    this.removeListener('change', callback);
+  }
+});
+// 添加广播
+AppDispatcher.register((action) => {
+  switch (action.actionType) {
+    case 'CREATE_TODO':
+      TodoStore.addTodo(action.todo);
+      TodoStore.emitChange();
+      break;
+    /* ... */    
+  }
+});
+
+// ./components
+class Todo extends React.Component {
+  /* ... */
+  componentDidMount() {
+    TodoStore.addChangeListener(this.onChange);
+  }
+  componentWillUnmount() {
+    TodoStore.removeChangeListener(this.onChange);
+  }
+  onChange() {
+    this.setState({
+      todos: TodoStore.getAll()
+    });
+  }
+  /* ... */
+}
+```
+
+### 小结
+
+Flux 流程: 用户在 view 上有一个交互时，Dispatcher 广播(`dispatch` 方法)一个 action (`Object` 对象)，在整个程序的总调度台(
+Dispatcher)里注册有各种类型的 action，在对应的类型中，store(`Object` 对象，实现了 Pub-Sub 模式)对这个 action 进行相应，对数据
+做相应处理，然后触发一个自定义事件，同时，在 view 上注册这个 store 的事件回调，相应事件并重新渲染界面。Flux 并不是简化代码，而是
+由它带来清晰的数据流，并把数据和 state 分离。
