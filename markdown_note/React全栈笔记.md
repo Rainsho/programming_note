@@ -765,3 +765,245 @@ Flux 流程: 用户在 view 上有一个交互时，Dispatcher 广播(`dispatch`
 Dispatcher)里注册有各种类型的 action，在对应的类型中，store(`Object` 对象，实现了 Pub-Sub 模式)对这个 action 进行相应，对数据
 做相应处理，然后触发一个自定义事件，同时，在 view 上注册这个 store 的事件回调，相应事件并重新渲染界面。Flux 并不是简化代码，而是
 由它带来清晰的数据流，并把数据和 state 分离。
+
+## Redux
+
+Redux 是 JS 的状态容器，提供可预测的状态管理。Redux 和 React 之间没有特别的关系，任何框架都可以将 Redux 作为状态管理器应用。
+
+Redux 试图让 state 的变化可以预测，这里的 state 指应用运行时需要的各种动态数据，当项目的 state 不可预测时可能产生 model 改变导致
+其他 model 或者不相干 view 变化的情况。
+
+### 三大定律
+
+* 单一数据源
+  * 应用的 state 存储在一个 JS 对象中(store)
+* state 是只读的
+  * 改变 state 的唯一方法是触发 action
+  * action 是一个信息载体，一个普通的 JS 对象
+* 使用纯函数执行修改
+  * 使用 reducer 描述 action 怎样改变 state 规定修改规则
+  * reducer 是纯函数，接受之前的 state 和 action 返回新的 state
+  * reducer 根据应用大小拆分成多个，分别操纵 state 的不同部分
+
+### 组成
+
+1. action
+
+action 作为信息的载体，包含 action 的名称和要传递的信息，可利用 store 的 `dispatch` 方法传递至 store，是 store 的唯一信息来源。
+
+```javascript
+const USER_LOGIN = 'USER_LOGIN';
+const userLoginAction = {
+  type: USER_LOGIN,
+  data: {name: 'myname', email: 'mail@mail.cc'}
+};
+```
+
+action 需要有一个 type 属性值表示该 action 的功能，通常被定义为常量。当项目比较复杂时，可以把 action 的 type 统一到一个模块下。
+利用 `action creator` 创建不同的 action (方便异步调用)。此处 `action creator` 是一个返回 action 的方法，而 Flux 中 Action 
+Creator 通常会调用 `dispatch`。
+
+```javascript
+// Redux
+function userLogin(data) {
+  return {
+    type: UUSER_LOGIN,
+    data: data
+  }
+}
+// Flux
+function userLogin(data) {
+  const action = {
+    type: USER_LOGIN,
+    data: data
+  };
+  Appdispatcher.dispatch(action);
+}
+```
+
+2. reducer
+
+action 定义要执行的操作，reducer 定义 state 如何相应。特别注意: **不能改变 state 值**，因此需要使用 `Object.assign` 或解构返回
+一个 state 的备份，且每次都是新的对象。 
+
+```javascript
+function user(state = initalUserState, action) {
+  switch(action.type) {
+    case USER_LOGIN:
+      return {
+        ...state,
+        isLogin: true,
+        userDate: action.data
+      };
+    default:
+      return state;
+  }
+}
+```
+
+当应用比较复杂时，考虑拆分多个 reducer，通过 `combineReducers` 合并输出。
+
+```javascript
+import { combineReducers } from 'redux';
+const rootReducer = combineReducers({posts, user});
+// 等价于
+function rootReducer(state = initalState, action) {
+  return {
+    posts: posts(state.posts, action),
+    user: user(state.user, action)
+  };
+}
+```
+
+3. store
+
+store 就是 action 和 reducer 的黏合剂，负责:
+
+* 保存整个程序的 state
+* 通过 `getState()` 访问 state
+* 通过 `dispatch()` 执行 action
+* 通过 `subscribe(listener)` 注册回调，监听 state 变化
+
+```javascript
+const store = createStore(rootReducer);
+console.log(store.getState());
+store.subscribe(() => {
+  console.log(store.getState());
+});
+store.dispatch(userLogin({name: 'myname', email: 'mail@mail.cc'}));
+```
+
+### 数据流
+
+* 调用 `store.dispatch(action)` 执行一个 action
+* store 调用传入的 reducer 函数，将当前的 state 和 action 传入到 reducer 函数中
+  * store 由 reducer 生成 `const store = createStore(rootReducer)`
+* reducer 处理 action 并返回新的 state
+* store 保存 reducer 返回的完整 state
+  * 通过 `store.getState()` 获取 state，或 `store.subscribe(listener)` 监听 state 变化
+
+### 使用 middleware
+
+Redux 中的 middleware 在 action 被 dispatch 时触发，提供了调用 reducer 之前的扩展能力。middleware 可以在原有 action 的基础上
+创建一个新的 action 和 dispatch (异步 action 处理等)，也可以触发一些额外的行为(日志记录等)。最后通过 `next` 触发后续的 
+middleware 与 reducer 本身。以下 1-5 提供了一些编程思想上的方法，Redux 的实现方式参见 6。
+
+1. 手动添加 log 信息
+
+```javascript
+console.log('dispatching', action);
+store.dispatch(action);
+console.log('next state', store.getState());
+```
+
+2. 覆盖 `store.dispatch` 方法
+
+```javascript
+const next = store.dispatch;
+store.dispatch = (action) => {
+  console.log();
+  const result = next(action);
+  console.log();
+  return result;
+}
+store.dispatch(action);
+```
+
+3. 添加多个 middleware
+
+```javascript
+// middleware one
+function patchStoreToAddLogging(store) {
+  const next = store.dispatch;
+  /* 2. 覆盖 store.dispatch 方法中代码 */
+}
+// middleware two
+function patchStoreToAddCrashReporting(store) {
+  const next = store.dispatch;
+  store.dispatch = function dispatchAndReportErrors(action) {
+    try {
+      return next(action);
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
+  }
+}
+// 依次调用两个方法覆盖原 store.dispatch 得到增强的 store.dispatch 方法
+patchStoreToAddLogging(store);
+patchStoreToAddCrashReporting(store);
+// 最后调用 store.dispatch 此时已具有两个 middleware 的功能
+store.dispatch(action);
+```
+
+4. curry 化 middleware
+
+直接覆盖 API 是一种 hack 做法，但通过修改 API 可链式的增强原方法。也可考虑使用 currying 写法，将 `store.dispatch` 的引用作为参数
+传递到函数中。curry 化的本质是在调用函数时传入更少的参数，而这个函数会返回另外一个函数并且可以继续接受其他参数。这也更接近官方的写法，
+将store、next(store.dispatch 的副本)和 action 依次传入，且在中间件中可以直接使用原 API 方法。
+
+```javascript
+function logger(store) {
+  return function wrapDispatchToAddLogging(next) {
+    return function dispatchAndLog(action) {
+      console.log();
+      const result = next(action);
+      console.log();
+      return result;
+    }
+  }
+}
+// ES6 写法
+const logger = store => next => action => {
+  console.log();
+  const result = next(action);
+  console.log();
+  return result;
+}
+```
+
+5. 简单版本的 applyMiddleware 方法
+
+把 middleware 和 store.dispatch 方法结合，通过 applyMiddleware 返回一个增强型的 store 和 store.dispatch。
+
+```javascript
+// Redux 的实现原理
+function applyMiddleware(store, middlewares) {
+  // 读取 middlewares 数组
+  middlewares = middlewares.slice();
+  middlewares.reverse();
+  // 保存副本
+  const dispatch = store.dispatch;
+  // 循环 middleware 覆盖 dispatch
+  middlewares.forEach(middleware => 
+    dispatch = middleware(store)(dispatch)
+  );
+  // 此时的 dispatch 已经附加了多个 middleware 的功能
+  // 返回 store 对象修改过的副本
+  return Object.assign({}, store, { dispatch });
+}
+store = applyMiddleware(store, [logger, crashReporter]);
+store.dispatch(action);
+```
+
+6. Redux 最终实现
+
+```javascript
+applyMiddleware(...mids) : createStore => enhancedCreateStore
+```
+
+简单实用 middleware 的方式就是实用 enhancer 来处理原先的 createStore 方法，得到新的 createStore 方法，并用新方法创建 store。
+
+```javascript
+const createStoreWithMiddleware = applyMiddleware(logger, crashReporter)(createStore);
+const store = createStoreWithMiddleware(rootReducer);
+```
+
+从 Redux v3.1.0 开始，createStore 方法已支持直接传入第三方或自己实现的 middleware 作为 enhancer 参数。
+
+```javascript
+const store = createStore(
+  rootReducer,
+  applyMiddleware(logger, crashReporter)
+);
+```
