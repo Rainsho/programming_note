@@ -886,7 +886,7 @@ store.dispatch(userLogin({name: 'myname', email: 'mail@mail.cc'}));
 
 Redux 中的 middleware 在 action 被 dispatch 时触发，提供了调用 reducer 之前的扩展能力。middleware 可以在原有 action 的基础上
 创建一个新的 action 和 dispatch (异步 action 处理等)，也可以触发一些额外的行为(日志记录等)。最后通过 `next` 触发后续的 
-middleware 与 reducer 本身。以下 1-5 提供了一些编程思想上的方法，Redux 的实现方式参见 6。
+middleware 与 reducer 本身。**以下 1-5 提供了一些编程思想上的方法，Redux 的实现方式参见 6**。
 
 1. 手动添加 log 信息
 
@@ -1007,3 +1007,295 @@ const store = createStore(
   applyMiddleware(logger, crashReporter)
 );
 ```
+
+### 使用 Redux
+
+Redux 着眼于对状态整体维护，React 是一个由状态整体输出界面整体 view 层的实现(~~简直搞基之合~~)。使用 Redux 更多的是如何获取并使
+用 store 的内容，以及创建触发 action。
+
+#### 在 React 项目中使用 Redux
+
+1. 从 store 获取数据
+
+通过属性传递将唯一的 store 从 React 根节点传入 `<App state={store.getState()} />`，这一问题在组件层级较多时简直噩梦。
+
+或者，让组件自行获取状态数据。通过 export 将 `createStore` 的方法暴露，让所有组件 import 该 store 然后对其 subscribe。为了将
+状态反映到界面，需要将这部分数据放到组件的 state 中，并对 store 进行监听。通过这样，组件私自与 store 建立联系，导致数据流难以追
+溯，拥有内部 state 的组件不便于测试，subscribe && setState 逻辑繁琐。
+
+2. 创建与触发 action
+
+使用 `actionCreator` 创建 action，通过 `store.dispatch` 触发。同样存在与 1. 类似的问题。
+
+#### react-redux
+
+react-redux 是以上两个问题的解决方案，API 包括一个 React Component (Provider) 和一个高阶 connect。
+
+1. Provider
+
+Provider 负责提供 store，将其包裹在原根节点之上，使整个组件树上的节点都可以通过 connect 获取 store。
+
+```javascript
+ReactDOM.render(
+  <Provider store={store}>
+    <RootComponent />
+  </Provider>,
+  rootEl
+);
+```
+
+2. connect
+
+connect 用来连接 store 与组件，常见用法如下:
+
+```javascript
+// ms2p
+function mapStateToProps(state) {
+  return {num: state.num};
+}
+// md2p
+function mapDispatchToProps(dispatch) {
+  return {
+    onBtnClick() {
+      dispatch(add()); // add: () => action
+    }
+  };
+}
+// component
+function Counter(props) {
+  return (
+    <p>
+      {props.num}
+      <button onClick={props.onBtnClick}>+1</button>
+    </p>
+  );
+}
+// HOC
+export default connect(mapStateToProps, mapDispatchToProps)(Counter);
+```
+
+示例中，通过 connect 让组件 Counter 与 store 连接，从 store 中取得 num 信息并在单击按钮时触发 store 上的 add 方法。
+
+* enhancer
+  * connect(ms2p, md2p) 得到一个高阶组件(关于 HOC 的定义详见官方文档)作为 enhancer
+  * 通过 enhancer 使 component 可以接触到 store (无须知道其存在) 监听读取状态并触发 action
+  * store 通过 Provider 引入，通过 context 实现 store 内容的隐私传递 (实现 `getChildContext` 方法)
+  * enhancer 通过组件 context 属性获取 store 对象，从而调用其提供的 API
+  * connect 接收以下三个参数并决定 enhancer 的行为
+* mapStateToProps
+  * `(state) => {}` 此处的 state 即 `store.getState` 的结果
+  * mapStateToProps 从全局状态中挑选、计算展示组件所需的数据
+  * 该方法在 state 改变时调用并计算结果，结果被作为展示控件属性影响其行为
+* mapDispatchToProps
+  * `(dispatch) => {}` 此处的 dispatch 正是 store 的 dispatch 方法
+  * 上面方法生成数据属性，该方法生成行为属性
+* mergeProps
+  * ms2p 和 md2p 可接受第二参数 ownProps
+  * mergeProps 用于将 stateProps、dispatchProps、ownProps 合并 (通常不需要)
+
+3. 设计考量
+
+回看 react-redux 设计思路，以 Provider 与 connect 各为一端，在 store 和 component 间建立一条纽带。纽带的实现细节被隐藏，只需要
+申明式的实现全局数据到具体组件的映射关系；同时，所有对于 store 的读取和作用都被限为有限的形式，避免数据的滥用。这共同构成了 
+redux-react 应用低调试难度的基础。(以下两个问题自己考量！)
+
+* Provider 与 connect 是否可合并成一个接口
+  * store 需要 `import` 进组件
+  * 这里多一个接口，但抽取了使组件树中获取 store 的公共逻辑
+* 为什么 connect 方法实现为这种比较复杂，甚至有点难用的形式
+  * connect 将组件连接到 store，就是变相调用 store 的 `getState` 和 `dispatch` 能力 并通过 `subscribe` 订阅
+  * `store.subscribe` 本身可被抽离，抽离后仅剩 store 更新后从新 state 计算 props 的逻辑
+  * 同时依赖 state 的 props 往往是数据属性，而依赖 dispatch 的往往是回调性质的属性
+  * React 倾向通过 HOC 而不是继承或 Mixin 实现复用，connet 就是根据配置信息 ms2p 及 md2p 生成高阶组件
+
+#### 组件组织
+
+> 总有一些组件，他们应该从父级通过属性获得部分或全部信息，另外一些组件，他们通过 connect 方法直接获取全局唯一的状态数据。参考 
+Redux 作者 Dan Abramov 的文章 《Presentational and Container Components》。
+
+1. 展示组件与容器组件
+
+* 展示组件 Presentational Component
+  * 关心应用外观
+  * 通常包含属于组件自身的 DOM 节点与样式信息
+  * 通常允许通过 `this.props.children` 实现嵌套
+  * 对应用的其余部分 (Flux action / store) 没有依赖
+  * 不会指定数据如何加载或改变
+  * 只通过 props 获取数据与行为 (回调)
+  * 极少会包含自身 state，如果有，一定是界面状态而非数据
+  * 一般写成 functional component
+  * 典型的例子: Page / Sidebar / Story / UserInfo / List
+* 容器组件 Container Component
+  * 关心应用如何工作
+  * 通常不包含 DOM 节点，一定不包含样式信息
+  * 为展示组件或其他容器组件提供数据与行为
+  * 抵用 Flux action 并将其作为回调函数给展示组件
+  * 往往是有状态的，扮演数据源的角色
+  * 通常由 HOC 生成
+  * 典型例子: UserPage / FollowersSiderbar / StoryContainer / FollowedUserList
+
+通过以上将组件职责明确，展示组件将有更好的复用性，同时通过对展示组件进行组装配合 mock 数据即可得到静态页面。容器组件是通过 
+connect 的结果函数处理得到的组件，而展示组件是被作为参数传入或组成其他展示组件的组件。
+
+2. 组织不同类型的组件
+
+> 对于一个中间件，如果某些数据仅仅用来向下传递给它的子节点，则自己并不消费。每次他的子节点所需的数据发生变化，都要相应地修改
+他的 props 以适应变化，**那么这些数据往往并不应该由它来提供给它的子节点**。通过对子节点进行 connect 产生一个新的容器组件，
+**由它直接从 store 中获取数据并提供给子节点**。
+
+#### 开发工具
+
+Chrome 插件 Redux DevTools，安装后作为 store enhancer 引入:
+
+```javascript
+const store = createStore(
+  reducer,
+  initialState,
+  // 做一步存在检查
+  window.devToolsExtension && window.devToolsExtension()
+);
+// compose 其他 middleware
+// compose(f, g) 等价 (...args) => f(g(...args))
+compose(
+  applyMiddleware(mid1, mid2, mid3),
+  window.devToolsExtension ? window.devToolsExtension() : f => f
+)
+```
+
+### 使用 Redux 重构项目
+
+整体步骤:
+
+* 整理 action，实现 action creator
+* 设计 store state，实现 reducer
+* 划分界面内容，实现展示组件
+* 通过容器组件连接 store 与展示组件
+
+#### 创建与触发 action
+
+1. 定义类型 action type  
+  -- 一般定义为常量
+2. 定义 action 内容的格式  
+  -- Redux 仅要求 type 为字符串或 Symbol 并不要求其他信息，常用 Flux Standard Action 约定 {type, payload, error}
+3. 定义 action creator  
+  -- 用来创建 action，收集简单参数，组装成 action 并对象返回
+
+#### 使用 middleware
+
+这里介绍 redux-thunk 和 redux-promise-middleware 帮助处理异步 action 的创建与触发。
+
+1. redux-thunk
+
+redux-thunk 允许 dispatch 一个函数，如果收到的 action 是一个函数，则将 dispatch 与 getState 作为参数传入，以此有条件的进行 
+dispatch。
+
+```javascript
+function updateEntryList(items) {
+  return { type: TYPE, items };
+}
+function fetchEntryList() {
+  return dispatch => {
+    storage.getAll()
+      .then(items => dispatch(updateEntryList(items)));
+  }
+}
+```
+
+更常见的两种(异步 action)做法:
+
+* 定义多个 action type ( *\_PENDING / *\_REJECT / *\_RESOLVE )
+  * *\_PENDING 时做乐观更新 (optimistic updates)，在 *\_REJECT 时做回滚
+* Flux Standard Action
+  * 将同一行为的不同状态视为同一 type，通过 error 字段做区分
+
+2. redux-promise-middleware
+
+以 promise 作为 action 的 payload，redux-promise-middleware 会根据 promise 状态触发不同的 action。
+
+```javascript
+// initialState 增加 isFetching 标识资源状态
+const initialState = {
+  isFetching: false,
+  data: []
+};
+// 两个异步方法，在 action type 后接上对应后缀
+// 得到该异步 action 所对应的被 redux-promise-middleware 处理后的 action type
+const { pendingOf, fullfilledOf } = ActionTypes;
+// export reducer
+export default function (state = initalState, action) {
+  const { type, payload } = action;
+  swith(type) {
+    // 开始请求 entryList 更新 isFetching
+    case pendingOf(ActionTypes.FETCH_ENTRY_LIST):
+      return {
+        ...state,
+        isFetching: true,
+      };
+    // 完成请求后，更新 data 和 isFetching
+    case fullfilledOf(ActionTypes.FETCH_ENTRY_LIST):
+      return {
+        ...state,
+        isFetching: false,
+        data: payload,
+      };
+    default:
+      return state;
+  }
+}
+```
+
+#### 实现 reducer
+
+store 由 reducer 创建且不包含业务逻辑，讨论设计 store 其实就是实现 reducer。注意合理的拆分与组装 (`combineReducers`) 即可。
+
+#### 创建与连接 store
+
+> 主要的区别在于，原来的数据从 `this.state` 获得，现在从 `this.props.state` 获得；原先的行为通过调用组件自身的方法、自身的方法
+再调用 `setState` 进行状态更新，而现在通过 `this.props.actions` 获取行为对应的方法，直接调用。
+
+```javascript
+const App = connect(
+  state => ({ state }),
+  dispatch => ({
+    actions: bindActionCreators(actionCreators, dispatch),
+  })
+)(MyComponent);
+```
+
+这里简单的整个 store state 的内容传递给了组件，并通过 Redux 提供的辅助方法 `bindActionCreators` 将 actionCreators 和 store 
+的 dispatch 方法进行绑定，且作为 action 属性传递给组件。`bindActionCreators` 的逻辑就是将 actionCreator 中的每一项 
+actionCreator 进行绑定。**原 action creator 基于参数创建 action，绑定后的函数就是基于参数创建并触发 action**，通过这样，在
+展示组件中也可以方便的使用。
+
+```javascript
+actionCreator => (...args) => dispatch(actionCreator(...args))
+```
+
+### 小结
+
+示例代码中的几个 Tips:
+
+```javascript
+// 1. create store with middlewares
+const store = applyMiddleware(
+  thunkMiddleware
+)(createStore)(rootReducer);
+
+// 2. create root component based on component Deskmark
+const App = connect(
+  state => ({ state }),
+  dispatch => ({
+    actions: bindActionCreators(actionCreators, dispatch),
+  })
+)(Deskmark);
+
+// 3. file storage based on localStorage
+const STORAGE = window.localStorage;
+STORAGE.getItem(STORAGE_KEY);
+STORAGE.setItem(STORAGE_KEY, JSON.stringify(results));
+
+// 4. update object in a list
+items.map(item => item.id === id ? ({...item, content}) : item);
+```
+
+## React + Redux 进阶
