@@ -1220,7 +1220,9 @@ const initialState = {
 };
 // 两个异步方法，在 action type 后接上对应后缀
 // 得到该异步 action 所对应的被 redux-promise-middleware 处理后的 action type
-const { pendingOf, fullfilledOf } = ActionTypes;
+export const pendingOf = actionType => `${actionType}_PENDING`;
+export const fulfilledOf = actionType => `${actionType}_FULFILLED`;
+export const rejectedOf = actionType => `${actionType}_REJECTED`;
 // export reducer
 export default function (state = initalState, action) {
   const { type, payload } = action;
@@ -1244,9 +1246,32 @@ export default function (state = initalState, action) {
 }
 ```
 
+理一下上面的执行过程:
+
+* 组件 mount 后通过 `this.props.actions.fetchEntryList()` 加载数据
+* `fetchEntryList` 作为 action creator 返回一个 action `{type: FETCH_ENTRY_LIST, payload: storage.getAll()}`
+* 上面的 `storage.getAll()` 返回一个 promise 对象，将由 redux-promise-middleware 中间件处理
+* 中间件首先 `dispatch` 一个 `type=action.type+'_PENDING'` 的 action
+* 当 promise 的状态变为 `resolve` 之后中间件 `dispatch` 一个 `type=action.type+'_FULFILLED'` 的 action 并把 promise 的返回
+作为 `payload`
+* 链式调用考虑在 action creator 中 `dispatch` 一个 `payload` 含 promise 对象的 action 然后在该 promise 的状态变为 
+`resolve` 之后再 `.then` 中 `dispatch` 其他 action
+
 #### 实现 reducer
 
 store 由 reducer 创建且不包含业务逻辑，讨论设计 store 其实就是实现 reducer。注意合理的拆分与组装 (`combineReducers`) 即可。
+关于 reducer 的组装，注意拆分与嵌套的层次关系以及 initialState 的分配。
+
+```javascript
+// typescript
+export function combineReducers<S>(reducers: ReducersMapObject): Reducer<S>;
+// e.g. 此时 action 将依次经过 reducer1 reducer2 ...
+const store = createStore(combineReducers({reducer1, reducer2}));
+store.getState() == {
+  reducer1: reducer1.initalState,
+  reducer2: reducer2.initalState
+};
+```
 
 #### 创建与连接 store
 
@@ -1296,6 +1321,15 @@ STORAGE.setItem(STORAGE_KEY, JSON.stringify(results));
 
 // 4. update object in a list
 items.map(item => item.id === id ? ({...item, content}) : item);
+
+// 5. debug async request devServer (proxy) + json-server
+const proxy = {
+  '/api': {
+    target: 'http://localhost:3000',
+    pathRewrite: { '^/api': '' }
+  }
+};
+module.exports = { ...configs, devServer: { proxy } };
 ```
 
 ## React + Redux 进阶
