@@ -1333,3 +1333,80 @@ module.exports = { ...configs, devServer: { proxy } };
 ```
 
 ## React + Redux 进阶
+
+### 常见误区
+
+1. React 的角色
+
+**React 并不是一个完整的组件化框架**。React 提供的功能局限于展现层层面，初衷是提供界面级的组件方案。将业务逻辑写入 React 
+Component 会使 Component 内部迅速膨胀，因此 Facebook 推出了 Flux 实现，将业务分解为 action 的构造行为 action creator 和响应 
+action 修改数据的 reducer。
+
+2. JSX 的角色
+
+JSX 实际上是在构造 JS 抽象语法树(AST)，其中每一个标签对应一个 JS 表达式，而传统模板引擎对应的是填充到页面上的 HTML 代码。
+
+3. React 的性能
+
+**Virtual DOM 的改变最终还是会作用到真实 DOM 上**，首选渲染轻量的 Virtual DOM，再由 Diff 得到并修改差异部分。手动操作 DOM 往往
+比 Diff 算法更精确，但需要维护视图与数据的对应关系，容易出错。**React 只是以可接受的执行效率损失，换取开发效率提升**。
+
+4. "短路" 式性能优化
+
+基于 `shouldComponentUpdate` 的 "短路" 式优化可以提升渲染性能，但是需基于两个前提: 1) render 方法是基于 `state` 和 `props` 的
+纯函数；2) `state` 及 `props` 是不可变的(immutable)的。浅比较通常只是遍历键值对，要求键名对应值严格相等，因此如果值中有可变数据，
+其内容变化可能不会被检查出来。
+
+5. 无状态函数式组件的性能
+
+SFC (Stateless Functional Component) 默认符合 PureRender 条件，但目前尚未得到承诺的针对性优化。由于 SFC 不满足 4.2 的前提，因
+此没有默认的 "短路" 优化。但依然可以通过 HOC 进行优化。
+
+```javascript
+import * as React from 'react';
+import shallowCompare from 'react-addons-shallow-compare';
+export default function PureRenderEnhance(component) {
+  return class Enhanced extends React.Component {
+    shouldComponentUpdate() {
+      return shallowCompare(this, nextProps, nextState);
+    }
+    render() {
+      return React.createElement(component, this.props, this.props.children);
+    }
+  }
+}
+```
+
+### 反模式
+
+> anti-pattern 或 antipattern 指的是在实践中明显出现但又低效或是有待优化的设计模式，是用来解决问题的带有共同性的不良方法。
+
+1. 基于 props 得到初始 state
+
+一个设计良好的 React 组件，其 state 与 props 包含信息应该是正交的。如果 state 需要基于 props 计算得到，那么它们**很有可能**包含
+了重复的信息。
+
+2. 使用 refs 获取子组件
+
+使用 refs 本身是没有问题的，但是使用 refs 引用子组件并调用其实例方法来触发状态变更往往意味着这里得到了变更状态的信息，却并没有记录
+在某个地方(某上层组件的 state 或全局的 store 里)。
+
+3. 冗余事实
+
+当消费数据时，如果某一份数据可以从不止一个来源(包括通过计算)得到，那么**往往**是有问题的，对于 Redux 的 store state 设计尤其容易
+发生。例如 `[{book: {author}}]` 可以拆成 `[book]` 和 `[author]` 两个 reducer。这样的数据结构对前端更友好，可能对后端不便，必要
+时需要对后端通信进行一些额外处理。
+
+4. 组件的隐式数据源
+
+典型例子就是组件中直接 `require` 某个模块，并从中获取数据，而这个模块可能是一个全局事件的触发器。这一做法在 React 体系中被放大: 
+组件行为不可预测(输入输出不一定相同)；复用性下降(依赖某 store 或模块)。
+
+5. 不被预期的副作用
+
+一般在 React 项目里，期望组件本身(尤其是 render 方法)是无副作用的，在 Redux 项目里，会要求 reducer 是无副总用的。在 React + 
+Redux 的应用里看成: 1)响应 I/O 创建行为；2)响应行为更新数据；3)数据映射到界面。其中 2) 和 3) 都是无副作用的纯逻辑。基于以上得到
+结论: **在组件的 render 方法或 store 的 reducer 中触发 action 或调用 setState 或操作 DOM 或发送 AJAX 请求等都是反模式**。
+
+### 性能优化
+### 社区产物
