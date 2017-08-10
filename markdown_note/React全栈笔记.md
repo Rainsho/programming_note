@@ -1367,7 +1367,7 @@ import * as React from 'react';
 import shallowCompare from 'react-addons-shallow-compare';
 export default function PureRenderEnhance(component) {
   return class Enhanced extends React.Component {
-    shouldComponentUpdate() {
+    shouldComponentUpdate(nextProps, nextState) {
       return shallowCompare(this, nextProps, nextState);
     }
     render() {
@@ -1409,4 +1409,162 @@ Redux 的应用里看成: 1)响应 I/O 创建行为；2)响应行为更新数据
 结论: **在组件的 render 方法或 store 的 reducer 中触发 action 或调用 setState 或操作 DOM 或发送 AJAX 请求等都是反模式**。
 
 ### 性能优化
+
+#### 优化原则
+
+优化本身即是权衡，多数情况下性能上的收益会或多或少的影响代码的简洁和可读性。注意两点: 1) 避免过早优化。2) 着眼瓶颈。
+
+#### 性能分析
+
+基于以上原则在项目基本开发完后考虑优化，对 React 项目来说，耗时可能存在两个地方: 1) 业务代码行为。2) React 行为。对于前者可以借助
+于 Chrome DevTool 提供的 JS Profiler，对于后者可借助官方的辅助工具 react-addons-perf。
+
+工具主要在命令行使用，故在项目入口处将其暴露到全局方便使用。
+
+```javascript
+import Perf from 'react-addons-perf';
+window.Perf = Perf;
+```
+
+常用 API :
+
+* `start`、`stop` 开始、结束测量
+* `getLastMeasurements` 返回完整测量结果
+* `printInclusive` 总体花费时间
+* `printExclusive` "独占" 时间，不考虑 `getDefaultProps`、`getInitialState`、`componentWillMount`、`componentDidMount` 等
+* `printWasted` 这里的浪费指执行了 `render` 但没有 DOM 更新的行为
+* `printOperations` 最终发生的真实 DOM 操作
+
+#### 生产环境版本
+
+构建时借助构建工具向代码运行环境注入 NODE_ENV 的 production 取值即可，Uglify 等代码压缩工具会将开发版本中相关代码移除。
+
+```javascript
+// webpack.config.js
+module.exports = {
+  /* ... */
+  plugins: [
+    new webpack.DefinePlugin({
+      'process.env': {
+        NODE_ENV: JOSN.stringify(process.env.NODE_ENV)
+      }
+    })
+  ]
+};
+
+// 常见开发库中代码
+if (process.env.NODE_ENV !== 'production') {
+  /* ... */
+}
+```
+
+#### 避免不必要的 render
+
+1. SCU
+
+注意"在合适的时候返回 `false`"，在不做限制的情况下 SCU 的复用性很低，通常对组件的输入进行一定的限制，然后抽离一个通用的 SCU 
+方法。首先要求组件的 `render` 是 pure 的，其次要求 props 和 state 都是 immutable的。
+
+"通用的比较行为"的实现，在面对 Object 和 Array 数据类型时需要遍历数据结构进行 deep compare，考虑到 SCU 是一个频繁调用的方法，折
+衷的做法是做 shallow compare 最多只遍历一层子节点进行比较。
+
+2. Mixin 和 HOC
+
+在 SCU 中实现一个浅比较，可以使用官方的 pure-render-mixin 或者 shallow-compare，也可以使用 HOC 包装这种功能。
+
+```javascript
+// Mixin 是 ES5 的写法
+var PureRenderMixin = require('react-addons-pure-render-mixin');
+React.createClass({
+  mixins: [PureRenderMixin],
+  render: function() {
+    return <div></div>;
+  }
+});
+// react-addons-shallow-compare
+shouldComponentUpdate(nextProps, nextState) {
+  return shallowCompare(this, nextProps, nextState);
+}
+// 第三方库提供的 HOC
+import { pure } from 'recompose';
+const OptimizedComponent = pure(MyComponent);
+```
+
+3. 不可变数据
+
+诸如 `a.foo.bar = 2` 这种操作将导致使用 `a` 作为 props 的组件失去 SCU 的意义。为此，Facebook 的工程师提出了 immutable-js 创建
+并操作不可变的数据结构。但使用 immutable-js 会引入新的库及新的数据操作方式。
+
+```javascript
+import Immutable form 'immutable';
+const map1 = Immutable.Map({a:1, b:2, c:3});
+const map2 = map1.set('b', 4);
+map1.get('b'); // 2
+map2.get('b'); // 4
+```
+
+原生 JS 中的基本数据类型 `boolean`、`number`、`string` 本身不可变，主要是 `object` 和 `array` 在修改时需要注意。
+
+```javascript
+// 会修改 object 本身
+obj.a = 1;
+Object.assign(obj, {a:2});
+// 不会修改 object 本身
+const newObj = Object.assign({}, obj, {a:2});
+const newObj = {...obj, {a:2}};
+// 会修改 array 本身
+arr[0] = 1;
+arr.push(2); // e.g. pop() / unshift() / shift() / splice(0,1,[2])
+// 返回新 array
+arr.concat(1);
+arr.slice(-1); // e.g. map() / filter()
+const newArr = Array.from(arr);
+[...arr, 1];
+```
+
+4. 计算结构记忆
+
+使用 immutable data 可以低成本的地判断状态是否改变，而在修改数据时可尽可能复用原有节点，
+**使得依赖未改变部分数据的组件所获得的数据保持不变**。但更多时候，组件的数据是基于全局 state 中数据计算组合得到的结果。这种情况下
+很多基于 SCU 的优化会失效。
+
+一个简单的解决方案是记忆计算结果，把从 state 计算得到的一份可用数据的行为称为 selector。selector 在其结果所依赖的部分数据未改变时
+直接返回选前计算结果。相关的库有 reselect。
+
+```javascript
+// 示例: 一个 Todo List 通过 visibleFilter 筛选需要展示的 list
+import { createSelector } from 'reselect';
+const listSelector = state => state.list;
+const visibleFilterSelector = state => state.visibleFilter;
+const visibleListSelector = createSelector(
+  listSelector,
+  visibleFilterSelector,
+  (list, visibleFilter) => list.filter(
+    item => (item.status === visibleFilter)
+  )
+);
+```
+
+上面实现了三个 selector，其中 `visibleListSelector` 由 `listSelector` 和 `visibleFilterSelector` 通过 `createSelector` 
+组合而成，组合而成的 selector 具有记忆能力，除非计算函数有参数(`state.list` 或 `state.visibleFilter`)发生变化，否则 
+`visibleListSelector` 一直返回同一份被记忆的数据。
+
+5. 容易忽视的细节
+
+对相同的内容每次都创造并使用了一个新的对象或函数，使 SUC 失效，典型位置包括父组件的 `render` 和生成容器的 `stateToProps` 方法。
+
+* 函数声明
+  * 使用匿名函数作为回调传递给子节点，而回调函数是子节点的 props
+* 函数绑定
+  * `Function.prototype.bind` 也会在每次执行时产生一个新的函数，从而影响 `props` 的对比
+  * 仅绑定上下文 `this` 的方法可以在组件实例化时手动绑定
+  * 需要绑定参数的函数，考虑将参数作为 `props` 传递给子组件，子组件中通过 `this.props.callback(this.props.id)` 调用
+  * ~~大部分情况，不至于为了性能如此妥协~~
+* object/array 字面量
+  * `const Foo = () => <Bar options={['a', 'b', 'c']} />`
+  * `const Foo = () => <Bar options={OPTIONS} />`
+
+#### 合理拆分组件
+#### 合理使用组件内部 state
+
 ### 社区产物
