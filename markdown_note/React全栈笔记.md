@@ -1565,6 +1565,235 @@ const visibleListSelector = createSelector(
   * `const Foo = () => <Bar options={OPTIONS} />`
 
 #### 合理拆分组件
+
+```javascript
+function Parent({a, b, cList}) {
+  return (
+    <A data={a} />
+    <B data={b} />
+    {cList.map(c => (<C data={c} />))}
+  );
+}
+```
+
+上例中，组件 A 或 B 依赖的数据改动都会触发 Parent 整体重新渲染，其中包括批量的组件 C。在 `cList` 比较多的情况下，即使对 C 做了
+"短路"优化，也不能忽视多次调用 SCU 的代价，同时 Parent 中过多的节点数量也会影响 Virtual DOM 的 Diff 速度。将 C 抽离，同时实现
+"短路"优化，当 A 或 B 依赖的数据变动时，检查到 CList 便终止，直接复用先前的 CList 渲染结果。
+
+```javascript
+function Parent({a, b, cList}) {
+  return (
+    <A data={a} />
+    <B data={b} />
+    <CList list={cList} />
+  );
+}
+```
+
 #### 合理使用组件内部 state
 
+典型的 React + Redux 应用中，整个应用的状态保存在单一 store 中，任何一处细微改动都需要重新计算整个 state，典型的例子就是 
+`input` 的交互。例如两个镜像的 `input` (e.g. `MirrorInputs`) 改变任意一个，二者值保持同步，这一过程通常由如下步骤:
+
+1. 调用 onChange
+1. 创建触发 action
+1. (++) middleware 依次处理
+1. (++) reducer 计算出新的 state
+1. store 内容更新，通知 conenet 的组件
+1. (++) 被 connet 的组件将新的 value 传递到 `MirrorInputs`，再传递到 input
+1. 局部界面重新渲染
+1. 作用到真实 DOM
+
+性能问题往往是因为不合理的设计，做优化也可以帮助更合理的组织应用的结构和逻辑。这里维持两个 `input` 同步，实际是 `MirrorInputs` 
+内部的逻辑，当前值也是组件的一个内部状态，一个正常的逻辑通常是相应用户操作、更新状态、通过回调通知外部。
+
+```javascript
+// SFC
+function MirrorInputs({value, onChange}) {
+  const realOnChange = e => onChange(e.target.value);
+  return (
+    <div>
+      <input key="A" value={this.state.value} onChange={this.onChange} />
+      <input key="B" value={this.state.value} onChange={this.onChange} />
+    </div>
+  );
+}
+
+// optimistic
+class MirrorInputs extends React.Component() {
+  constructor(props) {
+    super(props);
+    this.state = {
+      value: props.value,
+    };
+    this.onChange = this.onChange.bind(this);
+  }
+  onChange(e) {
+    this.setState(
+      { value: e.target.value },
+      () => this.props.onChange(this.state.value)
+    );
+  }
+  componentWillReceiveProps() {
+    /* ... */
+  }
+  render() {
+    return (
+      <div>
+        <input key="A" value={this.state.value} onChange={this.onChange} />
+        <input key="B" value={this.state.value} onChange={this.onChange} />
+      </div>
+    );
+  }
+}
+```
+
+#### 小结
+
+> 对于 React + Redux 的性能优化，主要着眼借助不可变数据与计算行为的记忆能力的"短路"式优化，实现基础是 React 是 HOC。除此之外，
+合理地组织与实现组件，也有利于减少无用计算量。
+
 ### 社区产物
+
+#### Flux 及其实现
+
+Flux 架构与它的实现本身就是 React 社区的重要产物，相关库有: Fluxxor、Fluxible、Reflux、Fluxy、Alt、NuclearJS、Redux、MobX。
+他们各有特点，或偏重函数式风格，或采用面向对象风格。**Flux 及其实现的本质上是解决数据/状态的维护问题**，得益于 React 增量更新 
+view 的实现，使单向数据流有意义。他们大都充当 model 和 controller 逻辑组织的角色，解决如何管理数据与状态，使整个应用的数据流与 
+React "always rerender" 的思想保持一致。
+
+#### Flux Standard Action
+
+action 的角色是状态变更信息的载体，Flux 仅要求其是一个 object 并包含 action type 字段。Flux Standard Action 希望通过规范 
+action 的格式，为通用的 action 工具或抽象实现奠定基础。
+
+典型 Flux Standard Action 结构如下，其首选是个普通的 action，并鼓励将负载信息放到 payload，必有 type 字段，可能有 error、
+payload、meta 字段，但不能含有其他。
+
+```javascript
+{
+  type: 'ADD_TODO',
+  payloda: {
+    text: 'Do something.'
+  }
+}
+```
+
+* type: action 的本质特征，值为 string 或 Symbol
+* payload: any 当 error 为 true 时，应该是一个 Error 对象
+* error: 为 true 时代表 acttion 发生了错误
+* meta: payload 之外的额外信息，诸如 middleware 的使用信息
+
+#### Ducks
+
+Ducks 是一种针对 Redux 项目的内容组织方案。将逻辑拆分到 action 与 reducer 两处，保持应用行为逻辑与状态维护的正交性，减少二者间
+的耦合，在规模扩张时避免歇菜。一般来说，添加一个特性时，以请求文章列表为例，往往需要拆解成三部分:
+
+* 向 constants 中添加 action type 定义
+* 在 action 中实现请求文章列表的 action creator
+* 向 reducer 中添加逻辑部分
+
+Ducks 建议将 action type 定义、action creator 实现与其对应的 reducer 打包放在一起(单个模块)，对不同的集合依据业务逻辑组织。
+
+```javascript
+// widgets.js
+
+// action
+const LOAD = 'my-app/widgets/LOAD';
+const CREATE = 'my-app/widgets/CREATE';
+const UPDATE = 'my-app/widgets/UPDATE';
+const REMOVE = 'my-app/widgets/REMOVE';
+
+// reducer
+export default function reducer(state = {}, action = {}) {
+  switch (action.type) {
+    /* ... */
+    default: return state;
+  }
+}
+
+// action creator
+export function loadWidgets() {
+  return { type: LOAD };
+}
+/* more action creator */
+```
+
+#### GraphQL/Relay 与 Falcor
+
+GraphQL/Relay 与 Falcor 用来解决一类问题: **复杂的前端应用如何高效地请求数据**。解决的关键点在于如何**准确描述对数据的需求**，
+以及智能的请求合并。GraphQL 与 Relay 都是 Facebook 推出的，与 Flux 和 React 一起构成了"React 全家桶"。GraphQL 描述数据模型的
+格式与需求，Relay 支持通过 GraphQL 申明数据需求的 JS 框架，依据 GraphQL 描述自动处理数据请求并返回。
+
+如下的 GraphQL 表示获取 ID 为 4 的 user 信息的 name 和 age 信息:
+
+```javascript
+{
+  user(id: 4) {
+    name
+    age
+  }
+}
+```
+
+Relay 为 GraphQL 与 React 的集成服务，并实现了如客户端 cache、请求合并、异常处理等内容。
+
+```javascript
+// 普通 React 组件
+class HelloApp extends React.Component {
+  render() {
+    // 通过 props 获取数据
+    const {hello} = this.props.greetings;
+    return <h1>{hello}</h1>;
+  }
+}
+
+// 使用 Relay
+HelloApp = Relay.createContainer(HelloApp, {
+  fragments: {
+    // 通过 GraphQL 语句申明依赖
+    greetings: () => Realy.QL'
+      fragments on Greetings {
+        hello,
+      }
+    ',
+  }
+});
+```
+
+GraphQL 本身的复杂语法使 Realy 也需要编写大量样板代码，引入成本较高，相比之下 Falcor 是一个相对轻量的解决方案。
+Falcor 是 Netflix 公司开源产品，基于 JS API，比 Relay 接口简洁。不过这种规则的 path 描述方式不如 GraphQL 灵活，也不具备 
+GraphQL 提供的类型系统。
+
+```javascript
+model.get("users[4]['name','age']");
+```
+
+#### 副作用的处理
+
+在 Flux 架构基础上，Redux 提出的范式吸收了很多函数式编程的思想，而函数式编程的很大特点就是，
+**尽可能使用可组合的无副作用的纯函数进行编写**，而将副作用控制在有限范围内。在前端开发中，典型的副作用有: 网络请求、
+localStorage、cookies 读写，甚至 DOM 操作等。然而现实世界的问题，副作用不可避免。
+
+1. action creator 中的副作用
+
+常见的 React + Redux 应用中，应用一般拆分为以下几个部分: 1) 数据映射到界面的逻辑(数据计算与 React 组件实现)；2) 用户操作或其他
+事件触发的逻辑(action creator)；3) 依据计算得到新数据的逻辑(reducer 实现)。
+
+显然 2) 中存在潜在副作用，比如多次的、异步的 action 创建与触发，因而一般借助 middleware 来实现。
+
+2. middleware 中的副作用
+
+1\) 中讨论的问题，将异步的 action 链写入 action creator 可能导致其迅速的膨胀，由此考虑将 action creator 中的任务交给幕后的 
+middleware 处理，这一方案的代表就是 redux-saga。
+
+redux-saga 允许使用生成器(generator)的形式描述特定 action 的相应动作，如此使 action creator 只返回普通 action 对象，将复杂的
+流程交由生成器中。生成器被称为 effect creator 通过 yield 分批次的产生 effect。这里的 effect 对应真实的副作用但并不会发生，只是
+包含了副作用描述信息的 JS 对象。如: `call(fn,arg1,arg2)` 对应一次函数调用，但这份信息只是一个 JS 对象，最终生效由 redux-saga 
+完成。类似的开发者编写行为描述、由 middleware 执行生效的思路也有 reduex-loop、redux-effects 等库。
+
+## 写在最后
+
+这篇文档前半部分以讨论技术为主，后半部分包含大量方法和思想的讨论，引用作者最后的一句话结尾。
+
+> 如果有一天你清楚的发现了自己遇到了这样的问题，那便是时候取尝试这些更为"高级"的方案了。
