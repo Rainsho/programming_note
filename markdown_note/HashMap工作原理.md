@@ -28,16 +28,16 @@ static class Entry<K, V> implements Map.Entry<K, V>{
 
 > A HashMap stores data into multiple singly linked lists of entries (also called buckets or bins). All the lists are registered in an array of Entry (Entry<K,V>[] array) and the default capacity of this inner array is 16.
 
-数据存储在多个链表中，默认大小16，默认加载因子0.75。
+***数据存储在多个链表中，默认大小16，默认加载因子0.75。***
 
 |index 0|index 1|...|index n|
 |:--:|:--:|:--:|:--:|
-|EntryA|**null**|...|entryZ|
+|EntryA|**null**|...|EntryZ|
 |EntryB|||**null**|
 |EntryC|
 |**null**|
 
-竖排构成链表，hash值相同的在同一链表（桶）内。  
+***竖排构成链表，hash值相同的在同一链表（桶）内。***  
 链表的index产生分三步：
 
 1. 获得key的hashcode

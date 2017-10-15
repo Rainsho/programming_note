@@ -258,7 +258,12 @@ process.exit(0); // 此时 process 已关闭，p 执行完后关闭
 
 ### Console
 
+关于 Console 异步/同步的两个说法: 
+
 > `console.log` 正常情况下是异步的, 除非使用 `new Console(stdout[, stderr])` 指定了一个文件为目的地
+
+> `console.log` is not standardized, so the behavior is rather undefined, and can be changed easily from release to release of the developer tools. 
+[stackoverflow: console-log-async-or-sync](https://stackoverflow.com/questions/23392111/console-log-async-or-sync)
 
 简单实现 `console.log`
 ```javascript
