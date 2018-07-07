@@ -1,6 +1,6 @@
 # programming_note 编码笔记
 
-!!!已归档！！！ [move to](https://github.com/Rainsho/blog)
+> !!!已归档!!! [move to](https://github.com/Rainsho/blog)
 
 A personal programming note with some useful codes collection.  
 个人编码笔记（总结以脑图为主）及一些有用的代码收集。
